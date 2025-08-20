@@ -1,0 +1,6 @@
+# Ignore target directories
+**/target/
+# Ignore IDE files
+*.idea/
+*.project
+*.classpath

@@ -1,0 +1,69 @@
+services:
+  eureka-server:
+    environment:
+      EUREKA_SERVER_DEFAULT_ZONE: ${EUREKA_SERVER_DEFAULT}
+    build:
+      context: ./eureka-server
+      dockerfile: Dockerfile
+    ports:
+      - "8761:8761"
+
+  gateway-service:
+    build:
+      context: ./gateway-service
+      dockerfile: Dockerfile
+    environment:
+      EUREKA_SERVER_DEFAULT_ZONE: ${EUREKA_SERVER_DEFAULT}
+    ports:
+      - "8080:8080"
+    depends_on:
+      - eureka-server
+
+  resource_db:
+    image: postgres:17-alpine
+    container_name: resource_postgres_db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${RESOURCE_DB}
+    ports:
+      - "${RESOURCE_DB_EXPOSED_PORT}:5432"
+    volumes:
+      - ./init-scripts/resource-db/create-table-init.sql:/docker-entrypoint-initdb.d/create-table-init.sql
+
+  song_db:
+    image: postgres:17-alpine
+    container_name: song_postgres_db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${SONG_DB}
+    ports:
+      - "${SONG_DB_EXPOSED_PORT}:5432"
+    volumes:
+      - ./init-scripts/song-db/create-table-init.sql:/docker-entrypoint-initdb.d/create-table-init.sql
+
+  resource-service:
+    environment:
+      EUREKA_SERVER_DEFAULT_ZONE: ${EUREKA_SERVER_DEFAULT}
+      SPRING_DATASOURCE_URL: ${RESOURCE_DB_URL}
+      SONG_SERVICE_URL: ${SONG_SERVICE_URL}
+    build:
+      context: ./resource-service
+      dockerfile: Dockerfile
+    depends_on:
+      - resource_db
+      - eureka-server
+
+  song-service:
+    environment:
+      EUREKA_SERVER_DEFAULT_ZONE: ${EUREKA_SERVER_DEFAULT}
+      SPRING_DATASOURCE_URL: ${SONG_DB_URL}
+    build:
+      context: ./song-service
+      dockerfile: Dockerfile
+    deploy:
+      replicas: 2
+    depends_on:
+      - song_db
+      - eureka-server
