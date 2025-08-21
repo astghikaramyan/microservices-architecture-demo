@@ -1,7 +1,9 @@
 package com.example.resourceservice.controller;
 
+import com.example.resourceservice.exception.DatabaseException;
 import com.example.resourceservice.exception.InvalidDataException;
 import com.example.resourceservice.exception.NotFoundException;
+import com.example.resourceservice.exception.StorageException;
 import com.example.resourceservice.model.ErrorResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -19,6 +21,16 @@ public class GlobalExceptionHandler {
     @ExceptionHandler({InvalidDataException.class})
     private ResponseEntity<Object> handleInvalidDataException(final InvalidDataException invalidDataException) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Objects.nonNull(invalidDataException.getErrorResponse()) ? invalidDataException.getErrorResponse() : invalidDataException.getSimpleErrorResponse());
+    }
+
+    @ExceptionHandler({StorageException.class})
+    private ResponseEntity<Object> handleStorageException(final StorageException storageException) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Objects.nonNull(storageException.getErrorResponse()) ? storageException.getErrorResponse() : storageException.getSimpleErrorResponse());
+    }
+
+    @ExceptionHandler({DatabaseException.class})
+    private ResponseEntity<Object> handleDatabaseException(final DatabaseException databaseException) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Objects.nonNull(databaseException.getErrorResponse()) ? databaseException.getErrorResponse() : databaseException.getSimpleErrorResponse());
     }
 
     @ExceptionHandler({NumberFormatException.class})

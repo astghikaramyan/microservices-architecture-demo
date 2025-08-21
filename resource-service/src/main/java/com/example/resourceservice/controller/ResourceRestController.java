@@ -23,7 +23,7 @@ public class ResourceRestController {
     @PostMapping(consumes = "audio/mpeg")
     public ResponseEntity<Map<String, Integer>> uploadResource(@RequestBody byte[] audioData) {
         try {
-            final ResourceEntity resourceEntity = resourceService.createResource(audioData);
+            final ResourceEntity resourceEntity = resourceService.uploadResource(audioData);
             if (Objects.nonNull(resourceEntity)) {
                 final Map<String, Integer> result = new HashMap<>();
                 result.put("id", resourceEntity.getId());
@@ -37,8 +37,8 @@ public class ResourceRestController {
 
     @GetMapping(value = "/{id}", produces = "audio/mpeg")
     public ResponseEntity<byte[]> getResource(@PathVariable Integer id) {
-        final ResourceEntity resource = resourceService.getResource(id);
-        return ResponseEntity.ok(resource.getData());
+        final byte[] resource = resourceService.getFileAsBytes(id);
+        return ResponseEntity.ok(resource);
     }
 
     @DeleteMapping
