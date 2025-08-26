@@ -1,5 +1,5 @@
 server:
-  port: 8085
+  port: 8089
 
 eureka:
   client:
@@ -8,20 +8,7 @@ eureka:
 
 spring:
   application:
-    name: resource-service
-
-  datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5433/RESOURCE_DB}
-    username: ${POSTGRES_USER:myuser}
-    password: ${POSTGRES_PASSWORD:mypass}
-    driver-class-name: org.postgresql.Driver
-
-  jpa:
-    properties:
-      hibernate:
-        dialect: org.hibernate.dialect.PostgreSQLDialect
-    hibernate:
-      ddl-auto: none
+    name: resource-processor
 
 song:
   service:
