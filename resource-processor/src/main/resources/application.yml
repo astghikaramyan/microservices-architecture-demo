@@ -25,11 +25,6 @@ spring:
           destination: ${APP_RABBITMQ_EXCHANGE:resource.exchange}
           group: ${APP_RABBITMQ_GROUP:createMetadata}
           content-type: text/plain
-
-        auditDeleteResourceMetadata-in-0:
-          destination: ${APP_RABBITMQ_EXCHANGE:resource.exchange}
-          group: ${APP_RABBITMQ_AUDIT_DELETE_GROUP:auditDeleteMetadata}
-          content-type: text/plain
       rabbit:
         bindings:
           createResourceMetadata-in-0:
@@ -43,19 +38,6 @@ spring:
               back-off-initial-interval: 2000 # 2 seconds
               back-off-max-interval: 10000    # 10 seconds
               back-off-multiplier: 2.0
-
-          auditDeleteResourceMetadata-in-0:
-            consumer:
-              acknowledge-mode: AUTO
-              auto-bind-dlq: true
-              republish-to-dlq: true
-              default-requeue-rejected: false
-              default-retryable: true
-              max-attempts: 3
-              back-off-initial-interval: 2000
-              back-off-max-interval: 10000
-              back-off-multiplier: 2.0
-
 song:
   service:
     url: ${SONG_SERVICE_URL:http://song-service:8081}

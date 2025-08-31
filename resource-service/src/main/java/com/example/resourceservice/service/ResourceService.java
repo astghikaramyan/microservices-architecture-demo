@@ -36,7 +36,6 @@ public class ResourceService {
     private static final String DATABASE_ERROR_MESSAGE = "Resource operation could not be completed";
     private static final String NOT_FOUNT_RESOURCE_ERROR_MESSAGE = "Resource with ID=%s not found";
     public static final String CREATE_RESOURCE_METADATA_OUT = "createResourceMetadata-out-0";
-    public static final String DELETE_RESOURCE_METADATA_OUT = "deleteResourceMetadata-out-0";
 
     @Autowired
     private ResourceRepository repository;
@@ -137,7 +136,6 @@ public class ResourceService {
                     this.storageService.deleteResourceFromStorage(s3Key);
                     this.deleteResourceWithMetadata(resourceId);
                     removedIds.add(resourceId);
-                    sendMessageThroughStreamBridge(DELETE_RESOURCE_METADATA_OUT, MessageBuilder.withPayload(resourceId).build());
                 } catch (StorageException e) {
                     throw new StorageException(dataPreparerService.prepareErrorResponse(STORAGE_ERROR_MESSAGE, SERVICE_UNAVAILABLE_RESPONSE_CODE));
                 } catch (SongClientException songClientException) {
@@ -154,8 +152,6 @@ public class ResourceService {
                         LOGGER.error("Failed to recover deleted file bytes in storage for resource ID={}", resourceId, e1);
                     }
                     throw new DatabaseException(dataPreparerService.prepareErrorResponse(DATABASE_ERROR_MESSAGE, INTERNAL_SERVER_ERROR_RESPONSE_CODE));
-                } catch (StreamBridgeException e) {
-                    LOGGER.error("Failed to send message through message broker for deleted resource with ID={} after retries. Error: {}", resourceId, e.getMessage(), e);
                 } catch (Exception e) {
                     LOGGER.error("Unexpected error occurred while deleting resource for resource ID={}. Error: {}", resourceId, e.getMessage(), e);
                 }

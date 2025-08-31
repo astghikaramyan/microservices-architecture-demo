@@ -42,18 +42,7 @@ public class ResourceProcessorEventListener {
                 SongMetadata metadata = retrieveFileMetadata(resourceData);
                 metadata.setResourceId(Integer.valueOf(resourceId));
                 songClient.saveResourceMetadata(metadata);
-            } catch (Exception e) {
-                throw new RuntimeException(e); // triggers retry & DLQ
-            }
-        };
-    }
-
-    @Bean
-    public Consumer<Message<String>> auditDeleteResourceMetadata() {
-        return message -> {
-            try {
-                String resourceId = message.getPayload();
-                LOGGER.info("Deleting metadata for resource ID: {}", resourceId);
+                LOGGER.info("Processed resource ID: {}", resourceId);
             } catch (Exception e) {
                 throw new RuntimeException(e); // triggers retry & DLQ
             }

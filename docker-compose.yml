@@ -89,7 +89,6 @@ services:
       SPRING_RABBITMQ_HOST: ${SPRING_RABBITMQ_HOST:-localhost}
       APP_RABBITMQ_EXCHANGE: ${APP_RABBITMQ_EXCHANGE:-resource.exchange}
       APP_RABBITMQ_GROUP: ${APP_RABBITMQ_GROUP:-createMetadata}
-      APP_RABBITMQ_AUDIT_DELETE_GROUP: ${APP_RABBITMQ_AUDIT_DELETE_GROUP:-auditDeleteMetadata}
       SPRING_RABBITMQ_PORT: ${SPRING_RABBITMQ_PORT:-5672}
     build:
       context: ./resource-service
@@ -112,7 +111,6 @@ services:
       SPRING_RABBITMQ_HOST: ${SPRING_RABBITMQ_HOST:-localhost}
       APP_RABBITMQ_EXCHANGE: ${APP_RABBITMQ_EXCHANGE:-resource.exchange}
       APP_RABBITMQ_GROUP: ${APP_RABBITMQ_GROUP:-createMetadata}
-      APP_RABBITMQ_AUDIT_DELETE_GROUP: ${APP_RABBITMQ_AUDIT_DELETE_GROUP:-auditDeleteMetadata}
       SPRING_RABBITMQ_PORT: ${SPRING_RABBITMQ_PORT:-5672}
     build:
       context: ./resource-processor
