@@ -1,38 +1,55 @@
 package com.example.resourceprocessor.service;
 
-import com.example.resourceprocessor.dto.SongDTO;
+import com.example.resourceprocessor.client.ResourceServiceClient;
+import com.example.resourceprocessor.client.SongServiceClient;
 import com.example.resourceprocessor.exception.InvalidDataException;
 import com.example.resourceprocessor.model.SongMetadata;
-import com.example.resourceprocessor.s3config.S3Config;
+import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.tika.exception.TikaException;
 import org.apache.tika.metadata.Metadata;
 import org.apache.tika.parser.ParseContext;
 import org.apache.tika.parser.mp3.Mp3Parser;
 import org.apache.tika.sax.BodyContentHandler;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.ResponseEntity;
-import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.messaging.Message;
 import org.xml.sax.SAXException;
+
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.*;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.function.Consumer;
 
-@Service
-public class ResourceProcessorService {
+@AllArgsConstructor
+@Slf4j
+@Configuration
+public class ResourceProcessorEventListener {
+    private static final Logger LOGGER = LoggerFactory.getLogger(ResourceProcessorEventListener.class);
+    private ResourceServiceClient resourceClient;
+    private SongServiceClient songClient;
 
-    @Value("${song.service.url}")
-    private String songServiceUrl;
-    @Value("${s3.bucket}")
-    private String BUCKET_NAME = "resource-files";
-    @Autowired
-    private RestTemplate restTemplate;
-    @Autowired
-    private S3Config s3Config;
+    @Bean
+    public Consumer<Message<String>> createResourceMetadata() {
+        return message -> {
+            try {
+                String resourceId = message.getPayload();
+                byte[] resourceData = resourceClient.getResourceBinary(resourceId);
+                SongMetadata metadata = retrieveFileMetadata(resourceData);
+                metadata.setResourceId(Integer.valueOf(resourceId));
+                songClient.saveResourceMetadata(metadata);
+                LOGGER.info("Processed resource ID: {}", resourceId);
+            } catch (Exception e) {
+                throw new RuntimeException(e); // triggers retry & DLQ
+            }
+        };
+    }
 
-    public SongMetadata retrieveFileMetadata(byte[] fileBytes) {
+    private SongMetadata retrieveFileMetadata(byte[] fileBytes) {
         try {
             return getFileMetadata(fileBytes);
         } catch (IOException | TikaException | SAXException e) {
@@ -110,20 +127,4 @@ public class ResourceProcessorService {
                 .orElse(false);
         return isCorrectYear ? value : "1987";
     }
-
-    private ResponseEntity<String> createSongMetadata(final SongMetadata songMetadata) {
-        String url = songServiceUrl + "/songs";
-        return restTemplate.postForEntity(url, songMetadata, String.class);
-    }
-
-    private ResponseEntity<SongDTO> getSongBasedOnResourceId(final Integer id) {
-        String url = songServiceUrl + "/songs/resource-identifiers/" + id;
-        return restTemplate.getForEntity(url, SongDTO.class);
-    }
-
-    private void deleteSong(final Integer id) {
-        String url = songServiceUrl + "/songs?id=" + id;
-        restTemplate.delete(url);
-    }
 }
-

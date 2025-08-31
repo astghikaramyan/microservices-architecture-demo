@@ -10,6 +10,19 @@ spring:
   application:
     name: resource-service
 
+  rabbitmq:
+    host: ${SPRING_RABBITMQ_HOST:localhost}
+    port: ${SPRING_RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_DEFAULT_USER:guest}
+    password: ${RABBITMQ_DEFAULT_PASS:guest}
+
+  cloud:
+    stream:
+      bindings:
+        createResourceMetadata-out-0:
+          destination: ${APP_RABBITMQ_EXCHANGE:resource.exchange}
+          content-type: text/plain
+
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5433/RESOURCE_DB}
     username: ${POSTGRES_USER:myuser}
