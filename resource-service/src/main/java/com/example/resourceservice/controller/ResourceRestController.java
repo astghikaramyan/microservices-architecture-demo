@@ -3,6 +3,7 @@ package com.example.resourceservice.controller;
 import com.example.resourceservice.entity.ResourceEntity;
 import com.example.resourceservice.exception.InvalidDataException;
 import com.example.resourceservice.service.ResourceService;
+import com.example.resourceservice.util.DataPreparerService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -19,6 +20,8 @@ import static com.example.resourceservice.service.ResourceService.BAD_REQUEST_RE
 public class ResourceRestController {
     @Autowired
     private ResourceService resourceService;
+    @Autowired
+    private DataPreparerService dataPreparerService;
 
     @PostMapping(consumes = "audio/mpeg")
     public ResponseEntity<Map<String, Integer>> uploadResource(@RequestBody byte[] audioData) {
@@ -31,7 +34,7 @@ public class ResourceRestController {
             }
             throw new InvalidDataException("Validation failed");
         } catch (InvalidDataException e) {
-            throw new InvalidDataException(this.resourceService.prepareErrorResponse(e.getMessage(), BAD_REQUEST_RESPONSE_CODE));
+            throw new InvalidDataException(this.dataPreparerService.prepareErrorResponse(e.getMessage(), BAD_REQUEST_RESPONSE_CODE));
         }
     }
 

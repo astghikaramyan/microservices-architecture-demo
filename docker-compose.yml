@@ -61,6 +61,21 @@ services:
       - "/var/run/docker.sock:/var/run/docker.sock"
     command: [ "sh", "-c", "localstack start" ]
 
+  rabbitmq:
+    image: rabbitmq:3.12-management
+    container_name: rabbitmq
+    ports:
+      - "${SPRING_RABBITMQ_PORT}:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER:-guest}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS:-guest}
+      RABBITMQ_DEFAULT_VHOST: ${RABBITMQ_DEFAULT_VHOST:-/}
+    env_file:
+      - .env
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+
   resource-service:
     environment:
       EUREKA_SERVER_DEFAULT_ZONE: ${EUREKA_SERVER_DEFAULT}
@@ -71,27 +86,39 @@ services:
       S3_SECRET_KEY: ${S3_SECRET_KEY}
       S3_BUCKET: ${S3_BUCKET}
       S3_REGION: ${S3_REGION}
+      SPRING_RABBITMQ_HOST: ${SPRING_RABBITMQ_HOST:-localhost}
+      APP_RABBITMQ_EXCHANGE: ${APP_RABBITMQ_EXCHANGE:-resource.exchange}
+      APP_RABBITMQ_GROUP: ${APP_RABBITMQ_GROUP:-createMetadata}
+      SPRING_RABBITMQ_PORT: ${SPRING_RABBITMQ_PORT:-5672}
     build:
       context: ./resource-service
       dockerfile: Dockerfile
     depends_on:
       - resource_db
       - eureka-server
+      - rabbitmq
 
   resource-processor:
     environment:
       EUREKA_SERVER_DEFAULT_ZONE: ${EUREKA_SERVER_DEFAULT}
       SONG_SERVICE_URL: ${SONG_SERVICE_URL}
+      RESOURCE_SERVICE_URL: ${RESOURCE_SERVICE_URL}
       S3_ENDPOINT: ${S3_ENDPOINT}
       S3_ACCESS_KEY: ${S3_ACCESS_KEY}
       S3_SECRET_KEY: ${S3_SECRET_KEY}
       S3_BUCKET: ${S3_BUCKET}
       S3_REGION: ${S3_REGION}
+      SPRING_RABBITMQ_HOST: ${SPRING_RABBITMQ_HOST:-localhost}
+      APP_RABBITMQ_EXCHANGE: ${APP_RABBITMQ_EXCHANGE:-resource.exchange}
+      APP_RABBITMQ_GROUP: ${APP_RABBITMQ_GROUP:-createMetadata}
+      SPRING_RABBITMQ_PORT: ${SPRING_RABBITMQ_PORT:-5672}
     build:
       context: ./resource-processor
       dockerfile: Dockerfile
     depends_on:
+      - rabbitmq
       - eureka-server
+      - resource-service
 
   song-service:
     environment:
@@ -105,3 +132,7 @@ services:
     depends_on:
       - song_db
       - eureka-server
+      - resource-processor
+
+volumes:
+  rabbitmq_data:
