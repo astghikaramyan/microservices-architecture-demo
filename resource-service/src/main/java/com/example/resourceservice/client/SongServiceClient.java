@@ -11,6 +11,8 @@ import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Recover;
 import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
 @Component
@@ -24,9 +26,15 @@ public class SongServiceClient {
     }
 
     @Retryable(
-            value = Exception.class,
+            retryFor = {RestClientException.class},
+            noRetryFor = {
+                    HttpClientErrorException.BadRequest.class,
+                    HttpClientErrorException.Conflict.class,
+                    HttpClientErrorException.NotFound.class
+            },
             maxAttempts = 3,
-            backoff = @Backoff(delay = 2000, multiplier = 2)
+            backoff = @Backoff(delay = 1000, multiplier = 2)
+
     )
     public ResponseEntity<String> saveResourceMetadata(SongMetadata songMetadata) {
         String url = songServiceUrl + "/songs";
@@ -42,9 +50,14 @@ public class SongServiceClient {
     }
 
     @Retryable(
-            value = Exception.class,
+            retryFor = {RestClientException.class},
+            noRetryFor = {
+                    HttpClientErrorException.BadRequest.class,
+                    HttpClientErrorException.Conflict.class,
+                    HttpClientErrorException.NotFound.class
+            },
             maxAttempts = 3,
-            backoff = @Backoff(delay = 2000, multiplier = 2)
+            backoff = @Backoff(delay = 1000, multiplier = 2)
     )
     public void deleteResourceMetadataByResourceId(Integer resourceId) {
         ResponseEntity<SongDTO> songDTO = getMetadataByResourceId(resourceId);

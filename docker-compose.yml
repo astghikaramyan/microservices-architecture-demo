@@ -5,6 +5,8 @@ services:
     build:
       context: ./eureka-server
       dockerfile: Dockerfile
+    env_file:
+      - .env
     ports:
       - "8761:8761"
 
@@ -12,6 +14,8 @@ services:
     build:
       context: ./gateway-service
       dockerfile: Dockerfile
+    env_file:
+      - .env
     environment:
       EUREKA_SERVER_DEFAULT_ZONE: ${EUREKA_SERVER_DEFAULT}
     ports:
@@ -26,6 +30,8 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${RESOURCE_DB}
+    env_file:
+      - .env
     ports:
       - "${RESOURCE_DB_EXPOSED_PORT}:5432"
     volumes:
@@ -38,6 +44,8 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${SONG_DB}
+    env_file:
+      - .env
     ports:
       - "${SONG_DB_EXPOSED_PORT}:5432"
     volumes:
@@ -55,6 +63,8 @@ services:
       - DATA_DIR=${LOCALSTACK_VOLUME_DIR:-./localstack-data}
       - SERVICES=s3
       - LAMBDA_EXECUTOR=docker
+    env_file:
+      - .env
     volumes:
       - "${LOCALSTACK_VOLUME_DIR:-./localstack-data}:/var/lib/localstack"
       - "./init-scripts/localstack-init:/etc/localstack/init/ready.d"
@@ -93,6 +103,8 @@ services:
     build:
       context: ./resource-service
       dockerfile: Dockerfile
+    env_file:
+      - .env
     depends_on:
       - resource_db
       - eureka-server
@@ -115,6 +127,8 @@ services:
     build:
       context: ./resource-processor
       dockerfile: Dockerfile
+    env_file:
+      - .env
     depends_on:
       - rabbitmq
       - eureka-server
@@ -127,6 +141,8 @@ services:
     build:
       context: ./song-service
       dockerfile: Dockerfile
+    env_file:
+      - .env
     deploy:
       replicas: 2
     depends_on:

@@ -8,13 +8,13 @@ import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Recover;
 import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.HttpClientErrorException;
+import software.amazon.awssdk.awscore.exception.AwsServiceException;
 import software.amazon.awssdk.core.ResponseBytes;
+import software.amazon.awssdk.core.exception.SdkClientException;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
-import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
-import software.amazon.awssdk.services.s3.model.GetObjectRequest;
-import software.amazon.awssdk.services.s3.model.GetObjectResponse;
-import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.model.*;
 
 import java.io.InputStream;
 
@@ -37,7 +37,12 @@ public class StorageService {
     private String S3_ENDPOINT;
 
     @Retryable(
-            value = Exception.class,
+            retryFor = {AwsServiceException.class, SdkClientException.class, S3Exception.class},
+            noRetryFor = {
+                    HttpClientErrorException.BadRequest.class,
+                    HttpClientErrorException.Conflict.class,
+                    HttpClientErrorException.NotFound.class
+            },
             maxAttempts = 3,
             backoff = @Backoff(delay = 1000, multiplier = 2)
     )
@@ -60,7 +65,12 @@ public class StorageService {
     }
 
     @Retryable(
-            value = Exception.class,
+            retryFor = {AwsServiceException.class, SdkClientException.class, S3Exception.class},
+            noRetryFor = {
+                    HttpClientErrorException.BadRequest.class,
+                    HttpClientErrorException.Conflict.class,
+                    HttpClientErrorException.NotFound.class
+            },
             maxAttempts = 3,
             backoff = @Backoff(delay = 1000, multiplier = 2)
     )

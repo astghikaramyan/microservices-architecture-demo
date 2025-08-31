@@ -15,8 +15,9 @@ import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Recover;
 import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.HttpClientErrorException;
 import software.amazon.awssdk.core.ResponseBytes;
-import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 
 import java.time.LocalDateTime;
@@ -39,8 +40,6 @@ public class ResourceService {
 
     @Autowired
     private ResourceRepository repository;
-    @Autowired
-    private S3Client s3Client;
     @Autowired
     private StreamBridge streamBridge;
     @Autowired
@@ -84,7 +83,8 @@ public class ResourceService {
             maxAttempts = 3,
             backoff = @Backoff(delay = 1000, multiplier = 2)
     )
-    private ResourceEntity saveResource(ResourceEntity resourceEntity) {
+    @Transactional
+    public ResourceEntity saveResource(ResourceEntity resourceEntity) {
         try {
             return this.repository.save(resourceEntity);
         } catch (Exception e) {
@@ -101,17 +101,17 @@ public class ResourceService {
 
     public byte[] getFileAsBytes(final Integer id) {
         validateResourceId(id);
-        ResourceEntity resource;
+        Optional<ResourceEntity> resourceOpt;
         try {
-            resource = this.repository.getById(id);
+            resourceOpt = this.repository.findById(id);
         } catch (Exception e) {
             throw new DatabaseException(dataPreparerService.prepareErrorResponse(DATABASE_ERROR_MESSAGE, INTERNAL_SERVER_ERROR_RESPONSE_CODE));
         }
-        if (Objects.isNull(resource) || Objects.isNull(resource.getS3Key())) {
+        if (resourceOpt.isPresent() && Objects.isNull(resourceOpt.get()) || Objects.isNull(resourceOpt.get().getS3Key())) {
             throw new NotFoundException(dataPreparerService.prepareErrorResponse(String.format(NOT_FOUNT_RESOURCE_ERROR_MESSAGE, id), NOT_FOUND_REQUEST_RESPONSE_CODE));
         }
         try {
-            ResponseBytes<GetObjectResponse> objectBytes = storageService.retrieveFileFromStorage(resource.getS3Key());
+            ResponseBytes<GetObjectResponse> objectBytes = storageService.retrieveFileFromStorage(resourceOpt.get().getS3Key());
             if (Objects.isNull(objectBytes)) {
                 throw new NotFoundException(dataPreparerService.prepareErrorResponse(String.format(NOT_FOUNT_RESOURCE_ERROR_MESSAGE, id), NOT_FOUND_REQUEST_RESPONSE_CODE));
             }
@@ -121,6 +121,7 @@ public class ResourceService {
         }
     }
 
+    @Transactional
     public Map<String, List<Integer>> deleteResourceByIds(final String id) {
         validateResourceIds(id);
         String[] ids = (id != null && !id.isBlank()) ? id.split(",") : new String[]{};
@@ -163,11 +164,11 @@ public class ResourceService {
     }
 
     @Retryable(
-            value = Exception.class,
+            retryFor = {Exception.class},
             maxAttempts = 3,
             backoff = @Backoff(delay = 1000, multiplier = 2)
     )
-    private void sendMessageThroughStreamBridge(String outBindingName, Message<Integer> message) {
+    public void sendMessageThroughStreamBridge(String outBindingName, Message<Integer> message) {
         try {
             streamBridge.send(outBindingName, message);
         } catch (Exception e){
