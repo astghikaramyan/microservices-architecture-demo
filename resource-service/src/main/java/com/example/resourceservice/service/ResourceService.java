@@ -1,41 +1,30 @@
 package com.example.resourceservice.service;
 
+import com.example.resourceservice.client.SongServiceClient;
 import com.example.resourceservice.entity.ResourceEntity;
-import com.example.resourceservice.exception.DatabaseException;
-import com.example.resourceservice.exception.InvalidDataException;
-import com.example.resourceservice.exception.NotFoundException;
-import com.example.resourceservice.exception.StorageException;
-import com.example.resourceservice.model.ErrorResponse;
-import com.example.resourceservice.model.SongMetadata;
+import com.example.resourceservice.exception.*;
 import com.example.resourceservice.repository.ResourceRepository;
-import org.apache.tika.exception.TikaException;
-import org.apache.tika.metadata.Metadata;
-import org.apache.tika.parser.ParseContext;
-import org.apache.tika.parser.mp3.Mp3Parser;
-import org.apache.tika.sax.BodyContentHandler;
+import com.example.resourceservice.util.DataPreparerService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cloud.stream.function.StreamBridge;
+import org.springframework.messaging.Message;
+import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.retry.annotation.Backoff;
+import org.springframework.retry.annotation.Recover;
 import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
-import org.xml.sax.SAXException;
 import software.amazon.awssdk.core.ResponseBytes;
-import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
-import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
-import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
-import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.io.InputStream;
 import java.time.LocalDateTime;
 import java.util.*;
 
 @Service
 public class ResourceService {
+    private static final Logger LOGGER = LoggerFactory.getLogger(ResourceService.class);
     private static final String BAD_REQUEST_INCORRECT_NUMBER_ERROR_MESSAGE = "Invalid value \'%s\' for ID. Must be a positive integer";
     public static final String BAD_REQUEST_NOT_NUMBER_ERROR_MESSAGE = "Invalid ID format: \'%s\' for ID. Only positive integers are allowed";
     private static final String BAD_REQUEST_CSV_TOO_LONG_ERROR_MESSAGE = "CSV string is too long: received %s characters, maximum allowed is 200";
@@ -44,34 +33,70 @@ public class ResourceService {
     private static final String STORAGE_ERROR_MESSAGE = "Failed to upload file to S3";
     public static final String INTERNAL_SERVER_ERROR_RESPONSE_CODE = "500";
     public static final String SERVICE_UNAVAILABLE_RESPONSE_CODE = "503";
-    private static final String DATABASE_ERROR_MESSAGE = "Failed to save resource identifier";
+    private static final String DATABASE_ERROR_MESSAGE = "Resource operation could not be completed";
     private static final String NOT_FOUNT_RESOURCE_ERROR_MESSAGE = "Resource with ID=%s not found";
+    public static final String CREATE_RESOURCE_METADATA_OUT = "createResourceMetadata-out-0";
 
-    @Value("${s3.bucket}")
-    private String BUCKET_NAME = "resource-files";
     @Autowired
     private ResourceRepository repository;
     @Autowired
-    private RestTemplate restTemplate;
-    @Autowired
     private S3Client s3Client;
+    @Autowired
+    private StreamBridge streamBridge;
+    @Autowired
+    private StorageService storageService;
+    @Autowired
+    private DataPreparerService dataPreparerService;
+    @Autowired
+    private SongServiceClient songServiceClient;
 
     public ResourceEntity uploadResource(byte[] fileBytes) {
-        SongMetadata songMetadata = retrieveFileMetadata(fileBytes);
-        String fileName = songMetadata.getName();
-        String safeFileName = fileName.replaceAll("[^a-zA-Z0-9._-]", "_");
-        String s3Key = "resources/" + UUID.randomUUID() + "-" + safeFileName;
+        String s3Key = "resources/" + UUID.randomUUID() + ".mp3";
+        String filePath = storageService.prepareFileUrl(s3Key);
         try {
-            s3Client.putObject(preparePutRequestData(s3Key), RequestBody.fromBytes(fileBytes));
+            storageService.addFileBytesToStorage(s3Key, fileBytes);
         } catch (Exception e) {
-            throw new StorageException(prepareErrorResponse(STORAGE_ERROR_MESSAGE, SERVICE_UNAVAILABLE_RESPONSE_CODE));
+            throw new StorageException(dataPreparerService.prepareErrorResponse(STORAGE_ERROR_MESSAGE, SERVICE_UNAVAILABLE_RESPONSE_CODE));
         }
+        Integer resourceId = null;
         try {
-            return this.repository.save(prepareResource(s3Key, fileName));
+            ResourceEntity resource = saveResource(prepareResource(s3Key, filePath));
+            resourceId = resource.getId();
+            sendMessageThroughStreamBridge(CREATE_RESOURCE_METADATA_OUT, MessageBuilder.withPayload(resourceId).build());
+            return resource;
+        } catch (DatabaseException e) {
+            try {
+                storageService.deleteResourceFromStorage(s3Key);
+            } catch (StorageException e1) {
+                LOGGER.error("Failed to delete file bytes from storage for not saved resource for s3key with name={}", s3Key, e1);
+            }
+            throw new DatabaseException(dataPreparerService.prepareErrorResponse(DATABASE_ERROR_MESSAGE, INTERNAL_SERVER_ERROR_RESPONSE_CODE));
+        } catch (StreamBridgeException e) {
+            LOGGER.error("Failed to send message through message broker for resource ID={} after retries. Error: {}", resourceId, e.getMessage(), e);
         } catch (Exception e) {
-            s3Client.deleteObject(prepareDeleteRequestData(s3Key));
-            throw new DatabaseException(prepareErrorResponse(DATABASE_ERROR_MESSAGE, INTERNAL_SERVER_ERROR_RESPONSE_CODE));
+            LOGGER.error("Unexpected error occurred while uploading resource. Error: {}", e.getMessage(), e);
         }
+        return null;
+    }
+
+    @Retryable(
+            value = Exception.class,
+            maxAttempts = 3,
+            backoff = @Backoff(delay = 1000, multiplier = 2)
+    )
+    private ResourceEntity saveResource(ResourceEntity resourceEntity) {
+        try {
+            return this.repository.save(resourceEntity);
+        } catch (Exception e) {
+            LOGGER.error(e.getMessage(), e);
+            throw new DatabaseException(dataPreparerService.prepareErrorResponse(DATABASE_ERROR_MESSAGE, INTERNAL_SERVER_ERROR_RESPONSE_CODE));
+        }
+    }
+
+    @Recover
+    public ResourceEntity recoverSaveResource(Exception e, ResourceEntity resourceEntity) {
+        LOGGER.error("Failed to save resource after retries. Error: {}", e.getMessage(), e);
+        throw new DatabaseException(dataPreparerService.prepareErrorResponse(DATABASE_ERROR_MESSAGE, INTERNAL_SERVER_ERROR_RESPONSE_CODE));
     }
 
     public byte[] getFileAsBytes(final Integer id) {
@@ -80,19 +105,19 @@ public class ResourceService {
         try {
             resource = this.repository.getById(id);
         } catch (Exception e) {
-            throw new DatabaseException(prepareErrorResponse(DATABASE_ERROR_MESSAGE, INTERNAL_SERVER_ERROR_RESPONSE_CODE));
+            throw new DatabaseException(dataPreparerService.prepareErrorResponse(DATABASE_ERROR_MESSAGE, INTERNAL_SERVER_ERROR_RESPONSE_CODE));
         }
         if (Objects.isNull(resource) || Objects.isNull(resource.getS3Key())) {
-            throw new NotFoundException(prepareErrorResponse(String.format(NOT_FOUNT_RESOURCE_ERROR_MESSAGE, id), NOT_FOUND_REQUEST_RESPONSE_CODE));
+            throw new NotFoundException(dataPreparerService.prepareErrorResponse(String.format(NOT_FOUNT_RESOURCE_ERROR_MESSAGE, id), NOT_FOUND_REQUEST_RESPONSE_CODE));
         }
         try {
-            ResponseBytes<GetObjectResponse> objectBytes = s3Client.getObjectAsBytes(prepareGetRequestData(resource.getS3Key()));
+            ResponseBytes<GetObjectResponse> objectBytes = storageService.retrieveFileFromStorage(resource.getS3Key());
             if (Objects.isNull(objectBytes)) {
-                throw new NotFoundException(prepareErrorResponse(String.format(NOT_FOUNT_RESOURCE_ERROR_MESSAGE, id), NOT_FOUND_REQUEST_RESPONSE_CODE));
+                throw new NotFoundException(dataPreparerService.prepareErrorResponse(String.format(NOT_FOUNT_RESOURCE_ERROR_MESSAGE, id), NOT_FOUND_REQUEST_RESPONSE_CODE));
             }
             return objectBytes.asByteArray();
         } catch (Exception e) {
-            throw new StorageException(prepareErrorResponse(STORAGE_ERROR_MESSAGE, SERVICE_UNAVAILABLE_RESPONSE_CODE));
+            throw new StorageException(dataPreparerService.prepareErrorResponse(STORAGE_ERROR_MESSAGE, SERVICE_UNAVAILABLE_RESPONSE_CODE));
         }
     }
 
@@ -105,14 +130,30 @@ public class ResourceService {
             Optional<ResourceEntity> resourceOpt = repository.findById(resourceId);
             if (resourceOpt.isPresent()) {
                 ResourceEntity resource = resourceOpt.get();
+                final String s3Key = resource.getS3Key();
+                byte[] fileBytes = getFileAsBytes(resourceId);
                 try {
-                    this.deleteResourceFromStorage(resource.getS3Key());
-                    this.deleteResource(resourceId);
+                    this.storageService.deleteResourceFromStorage(s3Key);
+                    this.deleteResourceWithMetadata(resourceId);
                     removedIds.add(resourceId);
                 } catch (StorageException e) {
-                    throw new StorageException(prepareErrorResponse(STORAGE_ERROR_MESSAGE, SERVICE_UNAVAILABLE_RESPONSE_CODE));
+                    throw new StorageException(dataPreparerService.prepareErrorResponse(STORAGE_ERROR_MESSAGE, SERVICE_UNAVAILABLE_RESPONSE_CODE));
+                } catch (SongClientException songClientException) {
+                    try {
+                        storageService.recoverDeletedFileToStorage(s3Key, fileBytes);
+                    } catch (StorageException e1) {
+                        LOGGER.error("Failed to recover deleted file bytes in storage for resource ID={}", resourceId, e1);
+                    }
+                    throw new SongClientException(dataPreparerService.prepareErrorResponse(DATABASE_ERROR_MESSAGE, SERVICE_UNAVAILABLE_RESPONSE_CODE));
                 } catch (DatabaseException e) {
-                    throw new DatabaseException(prepareErrorResponse(DATABASE_ERROR_MESSAGE, INTERNAL_SERVER_ERROR_RESPONSE_CODE));
+                    try {
+                        storageService.recoverDeletedFileToStorage(s3Key, fileBytes);
+                    } catch (StorageException e1) {
+                        LOGGER.error("Failed to recover deleted file bytes in storage for resource ID={}", resourceId, e1);
+                    }
+                    throw new DatabaseException(dataPreparerService.prepareErrorResponse(DATABASE_ERROR_MESSAGE, INTERNAL_SERVER_ERROR_RESPONSE_CODE));
+                } catch (Exception e) {
+                    LOGGER.error("Unexpected error occurred while deleting resource for resource ID={}. Error: {}", resourceId, e.getMessage(), e);
                 }
             }
         }
@@ -122,29 +163,46 @@ public class ResourceService {
     }
 
     @Retryable(
-            value = StorageException.class,
+            value = Exception.class,
             maxAttempts = 3,
             backoff = @Backoff(delay = 1000, multiplier = 2)
     )
-    public void deleteResourceFromStorage(String s3Key) {
+    private void sendMessageThroughStreamBridge(String outBindingName, Message<Integer> message) {
         try {
-            s3Client.deleteObject(prepareDeleteRequestData(s3Key));
-        } catch (Exception e) {
-            throw new StorageException(prepareErrorResponse(STORAGE_ERROR_MESSAGE, SERVICE_UNAVAILABLE_RESPONSE_CODE));
+            streamBridge.send(outBindingName, message);
+        } catch (Exception e){
+            throw  new StreamBridgeException(dataPreparerService.prepareErrorResponse("Failed to send message through StreamBridge", INTERNAL_SERVER_ERROR_RESPONSE_CODE));
         }
     }
 
+    @Recover
+    public void recoverSendMessageThroughStreamBridge(Exception e, String outBindingName, Message<Integer> message) {
+        LOGGER.error("Failed to send message through StreamBridge after retries. Error: {}", e.getMessage(), e);
+        throw new StreamBridgeException(dataPreparerService.prepareErrorResponse("Failed to send message through StreamBridge", INTERNAL_SERVER_ERROR_RESPONSE_CODE));
+    }
+
     @Retryable(
-            value = DatabaseException.class,
+            value = Exception.class,
             maxAttempts = 3,
             backoff = @Backoff(delay = 1000, multiplier = 2)
     )
-    public void deleteResource(Integer resourceId) {
+    public void deleteResourceWithMetadata(Integer resourceId) {
         try {
+            songServiceClient.deleteResourceMetadataByResourceId(resourceId);
             repository.deleteById(resourceId);
+        } catch (SongClientException songClientException) {
+            LOGGER.error(songClientException.getMessage(), songClientException);
+            throw new SongClientException(dataPreparerService.prepareErrorResponse(DATABASE_ERROR_MESSAGE, INTERNAL_SERVER_ERROR_RESPONSE_CODE));
         } catch (Exception e) {
-            throw new DatabaseException(prepareErrorResponse(DATABASE_ERROR_MESSAGE, INTERNAL_SERVER_ERROR_RESPONSE_CODE));
+            LOGGER.error(e.getMessage(), e);
+            throw new DatabaseException(dataPreparerService.prepareErrorResponse(DATABASE_ERROR_MESSAGE, INTERNAL_SERVER_ERROR_RESPONSE_CODE));
         }
+    }
+
+    @Recover
+    public void recoverDeleteResource(Exception e, Integer resourceId) {
+        LOGGER.error("Failed to delete resource with ID={} after retries. Error: {}", resourceId, e.getMessage(), e);
+        throw new DatabaseException(dataPreparerService.prepareErrorResponse(DATABASE_ERROR_MESSAGE, INTERNAL_SERVER_ERROR_RESPONSE_CODE));
     }
 
     public boolean existById(final Integer id) {
@@ -153,88 +211,17 @@ public class ResourceService {
 
     private void validateResourceIds(String id) {
         if (Objects.nonNull(id) && id.length() > 200) {
-            throw new InvalidDataException(prepareErrorResponse(String.format(BAD_REQUEST_CSV_TOO_LONG_ERROR_MESSAGE, id.length()), BAD_REQUEST_RESPONSE_CODE));
+            throw new InvalidDataException(dataPreparerService.prepareErrorResponse(String.format(BAD_REQUEST_CSV_TOO_LONG_ERROR_MESSAGE, id.length()), BAD_REQUEST_RESPONSE_CODE));
         }
         String[] ids = (id != null && !id.isBlank()) ? id.split(",") : new String[]{};
         for (String param : ids) {
             if (!isNumeric(param)) {
-                throw new InvalidDataException(prepareErrorResponse(String.format(BAD_REQUEST_NOT_NUMBER_ERROR_MESSAGE, param), BAD_REQUEST_RESPONSE_CODE));
+                throw new InvalidDataException(dataPreparerService.prepareErrorResponse(String.format(BAD_REQUEST_NOT_NUMBER_ERROR_MESSAGE, param), BAD_REQUEST_RESPONSE_CODE));
             }
             if (!isValidNumeric(param)) {
-                throw new InvalidDataException(prepareErrorResponse(String.format(BAD_REQUEST_INCORRECT_NUMBER_ERROR_MESSAGE, param), BAD_REQUEST_RESPONSE_CODE));
+                throw new InvalidDataException(dataPreparerService.prepareErrorResponse(String.format(BAD_REQUEST_INCORRECT_NUMBER_ERROR_MESSAGE, param), BAD_REQUEST_RESPONSE_CODE));
             }
         }
-    }
-
-    private SongMetadata getFileMetadata(final byte[] audioData) throws IOException, TikaException, SAXException {
-        SongMetadata songMetadata = new SongMetadata();
-
-        try (InputStream inputStream = new ByteArrayInputStream(audioData)) {
-            BodyContentHandler handler = new BodyContentHandler();
-            Metadata metadata = new Metadata();
-            Mp3Parser mp3Parser = new Mp3Parser();
-            ParseContext parseContext = new ParseContext();
-
-            mp3Parser.parse(inputStream, handler, metadata, parseContext);
-
-            songMetadata.setName(resolveEmptyField(metadata.get("dc:title")));
-            songMetadata.setArtist(resolveEmptyField(metadata.get("xmpDM:artist")));
-            songMetadata.setAlbum(resolveEmptyField(metadata.get("xmpDM:album")));
-            songMetadata.setDuration(resolveEmptyLength(formatDuration(metadata.get("xmpDM:duration"))));
-            songMetadata.setYear(resolveEmptyYear(metadata.get("xmpDM:releaseDate")));
-        }
-
-        return songMetadata;
-    }
-
-    private String formatDuration(String durationMillis) {
-        if (durationMillis == null) {
-            return null;
-        }
-        try {
-            double durationInSeconds = Double.parseDouble(durationMillis) / 1000;
-            int minutes = (int) (durationInSeconds / 60);
-            int seconds = (int) (durationInSeconds % 60);
-            return String.format("%02d:%02d", minutes, seconds);
-        } catch (NumberFormatException e) {
-            return "Unknown";
-        }
-    }
-
-    private String resolveEmptyField(final String value) {
-        return Optional.ofNullable(value).orElse("Unknown");
-    }
-
-    private String resolveEmptyLength(final String value) {
-        if (Objects.nonNull(value) && value.contains(":")) {
-            String[] parts = value.split(":");
-            if (parts.length == 3) {
-                return resolveDurationParts(parts[1]) + ":" + resolveDurationParts(parts[2]);
-            } else if (parts.length == 2) {
-                return resolveDurationParts(parts[0]) + ":" + resolveDurationParts(parts[1]);
-            } else if (parts.length == 1) {
-                return "00:" + resolveDurationParts(parts[0]);
-            }
-        }
-        return "00:22";
-    }
-
-    private String resolveDurationParts(final String part1) {
-        if (part1.length() == 2) {
-            return part1;
-        } else if (part1.length() == 1) {
-            return "0" + part1;
-        } else {
-            return "00";
-        }
-    }
-
-    private String resolveEmptyYear(final String value) {
-        final boolean isCorrectYear = Optional.ofNullable(value)
-                                              .filter(v -> v.length() == 4)
-                                              .map(s -> s.chars().allMatch(Character::isDigit))
-                                              .orElse(false);
-        return isCorrectYear ? value : "1987";
     }
 
     private boolean isValidNumeric(String id) {
@@ -253,51 +240,15 @@ public class ResourceService {
         }
     }
 
-    public ErrorResponse prepareErrorResponse(final String message, final String code) {
-        final ErrorResponse errorResponse = new ErrorResponse();
-        errorResponse.setErrorMessage(message);
-        errorResponse.setErrorCode(code);
-        return errorResponse;
-    }
-
-    private GetObjectRequest prepareGetRequestData(String s3Key) {
-        return GetObjectRequest.builder()
-                .bucket(BUCKET_NAME)
-                .key(s3Key)
-                .build();
-    }
-
-    private PutObjectRequest preparePutRequestData(String s3Key) {
-        return PutObjectRequest.builder()
-                .bucket(BUCKET_NAME)
-                .key(s3Key)
-                .build();
-    }
-
-    private DeleteObjectRequest prepareDeleteRequestData(String s3Key) {
-        return DeleteObjectRequest.builder()
-                .bucket(BUCKET_NAME)
-                .key(s3Key)
-                .build();
-    }
-
-    private SongMetadata retrieveFileMetadata(byte[] fileBytes) {
-        try {
-            return getFileMetadata(fileBytes);
-        } catch (IOException | TikaException | SAXException e) {
-            throw new InvalidDataException("Invalid file format: . Only MP3 files are allowed");
-        }
-    }
-
     private void validateResourceId(Integer id) {
         if (!isNumeric(String.valueOf(id))) {
-            throw new InvalidDataException(prepareErrorResponse(String.format(BAD_REQUEST_NOT_NUMBER_ERROR_MESSAGE, id), BAD_REQUEST_RESPONSE_CODE));
+            throw new InvalidDataException(dataPreparerService.prepareErrorResponse(String.format(BAD_REQUEST_NOT_NUMBER_ERROR_MESSAGE, id), BAD_REQUEST_RESPONSE_CODE));
         }
         if (!isValidNumeric(String.valueOf(id))) {
-            throw new InvalidDataException(prepareErrorResponse(String.format(BAD_REQUEST_INCORRECT_NUMBER_ERROR_MESSAGE, id), BAD_REQUEST_RESPONSE_CODE));
+            throw new InvalidDataException(dataPreparerService.prepareErrorResponse(String.format(BAD_REQUEST_INCORRECT_NUMBER_ERROR_MESSAGE, id), BAD_REQUEST_RESPONSE_CODE));
         }
         if (!this.existById(Integer.valueOf(id))) {
-            throw new NotFoundException(prepareErrorResponse(String.format(NOT_FOUNT_RESOURCE_ERROR_MESSAGE, id), NOT_FOUND_REQUEST_RESPONSE_CODE));
+            throw new NotFoundException(dataPreparerService.prepareErrorResponse(String.format(NOT_FOUNT_RESOURCE_ERROR_MESSAGE, id), NOT_FOUND_REQUEST_RESPONSE_CODE));
         }
     }
 
