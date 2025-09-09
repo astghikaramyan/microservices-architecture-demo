@@ -8,7 +8,8 @@ import java.time.LocalDateTime;
 @Table(name = "resource")
 public class ResourceEntity {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "resource_seq")
+    @SequenceGenerator(name = "resource_seq", sequenceName = "resource_seq", allocationSize = 1)
     private Integer id;
 
     @Column(name = "file_name", nullable = false, length = 255)

@@ -7,7 +7,8 @@ import org.springframework.lang.NonNull;
 @Table(name = "song")
 public class SongEntity {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "song_seq")
+    @SequenceGenerator(name = "song_seq", sequenceName = "song_seq", allocationSize = 1)
     private Integer id;
 
     @NonNull
