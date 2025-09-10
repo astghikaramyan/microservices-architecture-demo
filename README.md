@@ -1,6 +1,6 @@
 ## 🧪 Testing Strategy
 
-We apply a layered testing approach to balance **speed, coverage, and confidence**.
+It was applied a layered testing approach to balance **speed, coverage, and confidence**.
 
 ---
 
