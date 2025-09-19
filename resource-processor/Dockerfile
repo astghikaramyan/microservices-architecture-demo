@@ -6,6 +6,8 @@ COPY src ./src
 RUN mvn clean package -DskipTests
 FROM eclipse-temurin:17-jre-alpine
 WORKDIR /app
+# Install curl for Docker healthcheck
+RUN apk add --no-cache curl
 COPY --from=build /app/target/*.jar app.jar
 EXPOSE 8089
 CMD ["java", "-jar", "app.jar"]

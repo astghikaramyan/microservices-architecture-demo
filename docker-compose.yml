@@ -1,79 +1,102 @@
 services:
   eureka-server:
-    environment:
-      EUREKA_SERVER_DEFAULT_ZONE: ${EUREKA_SERVER_DEFAULT}
     build:
       context: ./eureka-server
       dockerfile: Dockerfile
-    env_file:
-      - .env
     ports:
       - "8761:8761"
+    env_file: .env
+    environment:
+      EUREKA_SERVER_DEFAULT_ZONE: ${EUREKA_SERVER_DEFAULT}
+    restart: always
+    healthcheck:
+      test: [ "CMD", "curl", "-fsS", "http://localhost:8761/actuator/health" ]
+      interval: 20s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
 
   gateway-service:
     build:
       context: ./gateway-service
       dockerfile: Dockerfile
-    env_file:
-      - .env
-    environment:
-      EUREKA_SERVER_DEFAULT_ZONE: ${EUREKA_SERVER_DEFAULT}
     ports:
       - "8080:8080"
+    env_file: .env
+    environment:
+      EUREKA_SERVER_DEFAULT_ZONE: ${EUREKA_SERVER_DEFAULT}
+    restart: always
     depends_on:
-      - eureka-server
+      eureka-server:
+        condition: service_healthy
+    healthcheck:
+      test: [ "CMD", "curl", "-fsS", "http://localhost:8080/actuator/health" ]
+      interval: 20s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
 
   resource_db:
     image: postgres:17-alpine
-    container_name: resource_postgres_db
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${RESOURCE_DB}
-    env_file:
-      - .env
     ports:
       - "${RESOURCE_DB_EXPOSED_PORT}:5432"
     volumes:
-      - ./init-scripts/resource-db/create-table-init.sql:/docker-entrypoint-initdb.d/create-table-init.sql
+      - ./init-scripts/resource-db/create-table-init.sql:/docker-entrypoint-initdb.d/create-table-init.sql:ro
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${RESOURCE_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   song_db:
     image: postgres:17-alpine
-    container_name: song_postgres_db
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${SONG_DB}
-    env_file:
-      - .env
     ports:
       - "${SONG_DB_EXPOSED_PORT}:5432"
     volumes:
-      - ./init-scripts/song-db/create-table-init.sql:/docker-entrypoint-initdb.d/create-table-init.sql
+      - ./init-scripts/song-db/create-table-init.sql:/docker-entrypoint-initdb.d/create-table-init.sql:ro
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${SONG_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
-  # LocalStack service for mocking AWS S3
   localstack:
-    container_name: "${LOCALSTACK_DOCKER_NAME:-localstack-main}"
     image: localstack/localstack:2.2
     ports:
       - "127.0.0.1:4566:4566"
       - "127.0.0.1:4510-4559:4510-4559"
     environment:
-      - DEBUG=${DEBUG:-1}
-      - DATA_DIR=${LOCALSTACK_VOLUME_DIR:-./localstack-data}
-      - SERVICES=s3
-      - LAMBDA_EXECUTOR=docker
-    env_file:
-      - .env
+      DEBUG: ${DEBUG:-1}
+      DATA_DIR: ${LOCALSTACK_VOLUME_DIR:-./localstack-data}
+      SERVICES: s3
+      LAMBDA_EXECUTOR: docker
     volumes:
       - "${LOCALSTACK_VOLUME_DIR:-./localstack-data}:/var/lib/localstack"
-      - "./init-scripts/localstack-init:/etc/localstack/init/ready.d"
+      - "./init-scripts/localstack-init:/etc/localstack/init/ready.d:ro"
       - "/var/run/docker.sock:/var/run/docker.sock"
-    command: [ "sh", "-c", "localstack start" ]
+    restart: always
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -fsS http://localhost:4566/_localstack/health || exit 1" ]
+      interval: 20s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
 
   rabbitmq:
     image: rabbitmq:3.12-management
-    container_name: rabbitmq
     ports:
       - "${SPRING_RABBITMQ_PORT}:5672"
       - "15672:15672"
@@ -81,36 +104,46 @@ services:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER:-guest}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS:-guest}
       RABBITMQ_DEFAULT_VHOST: ${RABBITMQ_DEFAULT_VHOST:-/}
-    env_file:
-      - .env
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "rabbitmq-diagnostics -q status || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
 
-  resource-service:
+  song-service:
+    build:
+      context: ./song-service
+      dockerfile: Dockerfile
+    ports:
+      - "8081:8081"
+    env_file: .env
     environment:
       EUREKA_SERVER_DEFAULT_ZONE: ${EUREKA_SERVER_DEFAULT}
-      SPRING_DATASOURCE_URL: ${RESOURCE_DB_URL}
-      SONG_SERVICE_URL: ${SONG_SERVICE_URL}
-      S3_ENDPOINT: ${S3_ENDPOINT}
-      S3_ACCESS_KEY: ${S3_ACCESS_KEY}
-      S3_SECRET_KEY: ${S3_SECRET_KEY}
-      S3_BUCKET: ${S3_BUCKET}
-      S3_REGION: ${S3_REGION}
-      SPRING_RABBITMQ_HOST: ${SPRING_RABBITMQ_HOST:-localhost}
-      APP_RABBITMQ_EXCHANGE: ${APP_RABBITMQ_EXCHANGE:-resource.exchange}
-      APP_RABBITMQ_GROUP: ${APP_RABBITMQ_GROUP:-createMetadata}
-      SPRING_RABBITMQ_PORT: ${SPRING_RABBITMQ_PORT:-5672}
-    build:
-      context: ./resource-service
-      dockerfile: Dockerfile
-    env_file:
-      - .env
+      SPRING_DATASOURCE_URL: ${SONG_DB_URL}
+    restart: always
     depends_on:
-      - resource_db
-      - eureka-server
-      - rabbitmq
+      eureka-server:
+        condition: service_healthy
+      song_db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8081/actuator/health | grep UP || exit 1"]
+      interval: 20s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
 
   resource-processor:
+    build:
+      context: ./resource-processor
+      dockerfile: Dockerfile
+    ports:
+      - "8089:8089"
+    env_file: .env
     environment:
       EUREKA_SERVER_DEFAULT_ZONE: ${EUREKA_SERVER_DEFAULT}
       SONG_SERVICE_URL: ${SONG_SERVICE_URL}
@@ -121,34 +154,62 @@ services:
       S3_BUCKET: ${S3_BUCKET}
       S3_REGION: ${S3_REGION}
       SPRING_RABBITMQ_HOST: ${SPRING_RABBITMQ_HOST:-localhost}
+      SPRING_RABBITMQ_PORT: ${SPRING_RABBITMQ_PORT:-5672}
       APP_RABBITMQ_EXCHANGE: ${APP_RABBITMQ_EXCHANGE:-resource.exchange}
       APP_RABBITMQ_GROUP: ${APP_RABBITMQ_GROUP:-createMetadata}
-      SPRING_RABBITMQ_PORT: ${SPRING_RABBITMQ_PORT:-5672}
-    build:
-      context: ./resource-processor
-      dockerfile: Dockerfile
-    env_file:
-      - .env
+    restart: always
     depends_on:
-      - rabbitmq
-      - eureka-server
-      - resource-service
+      eureka-server:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      song-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8089/actuator/health | grep UP || exit 1"]
+      interval: 20s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
 
-  song-service:
+  resource-service:
+    build:
+      context: ./resource-service
+      dockerfile: Dockerfile
+    ports:
+      - "8085:8085"
+    env_file: .env
     environment:
       EUREKA_SERVER_DEFAULT_ZONE: ${EUREKA_SERVER_DEFAULT}
-      SPRING_DATASOURCE_URL: ${SONG_DB_URL}
-    build:
-      context: ./song-service
-      dockerfile: Dockerfile
-    env_file:
-      - .env
-    deploy:
-      replicas: 2
+      SPRING_DATASOURCE_URL: ${RESOURCE_DB_URL}
+      SONG_SERVICE_URL: ${SONG_SERVICE_URL}
+      S3_ENDPOINT: ${S3_ENDPOINT}
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY}
+      S3_SECRET_KEY: ${S3_SECRET_KEY}
+      S3_BUCKET: ${S3_BUCKET}
+      S3_REGION: ${S3_REGION}
+      SPRING_RABBITMQ_HOST: ${SPRING_RABBITMQ_HOST:-localhost}
+      SPRING_RABBITMQ_PORT: ${SPRING_RABBITMQ_PORT:-5672}
+      APP_RABBITMQ_EXCHANGE: ${APP_RABBITMQ_EXCHANGE:-resource.exchange}
+      APP_RABBITMQ_GROUP: ${APP_RABBITMQ_GROUP:-createMetadata}
+    restart: always
     depends_on:
-      - song_db
-      - eureka-server
-      - resource-processor
+      eureka-server:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      resource_db:
+        condition: service_healthy
+      localstack:
+        condition: service_healthy
+      resource-processor:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8085/actuator/health | grep UP || exit 1"]
+      interval: 20s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
 
 volumes:
   rabbitmq_data:

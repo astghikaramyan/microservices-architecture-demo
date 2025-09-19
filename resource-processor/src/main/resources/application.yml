@@ -38,6 +38,14 @@ spring:
               back-off-initial-interval: 2000 # 2 seconds
               back-off-max-interval: 10000    # 10 seconds
               back-off-multiplier: 2.0
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always
 song:
   service:
     url: ${SONG_SERVICE_URL:http://song-service:8081}

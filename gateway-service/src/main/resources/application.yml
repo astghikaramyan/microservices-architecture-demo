@@ -8,6 +8,15 @@ eureka:
     instance:
       prefer-ip-address: true
 
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always
+
 spring:
   application:
     name: gateway-service
