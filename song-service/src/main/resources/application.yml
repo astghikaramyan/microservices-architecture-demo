@@ -4,14 +4,16 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info
+        include: refresh,health,info
   endpoint:
     health:
       show-details: always
 spring:
   application:
     name: song-service
-
+  cloud:
+    config:
+      name: song-service
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5434/SONG_DB}
     username: ${POSTGRES_USER:myuser}

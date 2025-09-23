@@ -1,0 +1,13 @@
+spring:
+  config:
+    import: ${CONFIG_URI:configserver:http://config-server:8888/}
+  cloud:
+    config:
+      discovery:
+        enabled: true
+        service-id: config-server  # discovered via Eureka
+      fail-fast: true   # fail immediately if config server is not reachable
+      retry:
+        max-attempts: 6
+        initial-interval: 2000
+        multiplier: 1.5

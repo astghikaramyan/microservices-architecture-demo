@@ -31,7 +31,22 @@ spring:
           uri: lb://resource-service
           predicates:
             - Path=/resources/**
+          filters:
+            - name: CircuitBreaker
+              args:
+                name: resourceServiceCircuitBreaker
+                fallbackUri: forward:/fallback/resources
         - id: song-service
           uri: lb://song-service
           predicates:
             - Path=/songs/**
+          filters:
+            - name: CircuitBreaker
+              args:
+                name: songServiceCircuitBreaker
+                fallbackUri: forward:/fallback/songs
+        # Catch-all route for undefined endpoints
+        - id: fallback-route
+          uri: forward:/fallback
+          predicates:
+            - Path=/**
