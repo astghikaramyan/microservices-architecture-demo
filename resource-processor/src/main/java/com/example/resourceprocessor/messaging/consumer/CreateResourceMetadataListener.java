@@ -1,8 +1,9 @@
-package com.example.resourceprocessor.service;
+package com.example.resourceprocessor.messaging.consumer;
 
 import com.example.resourceprocessor.client.ResourceServiceClient;
 import com.example.resourceprocessor.client.SongServiceClient;
 import com.example.resourceprocessor.exception.InvalidDataException;
+import com.example.resourceprocessor.messaging.publisher.ProcessSongMetadataPublisher;
 import com.example.resourceprocessor.model.SongMetadata;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -16,6 +17,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.Message;
+import org.springframework.messaging.support.MessageBuilder;
 import org.xml.sax.SAXException;
 
 import java.io.ByteArrayInputStream;
@@ -25,13 +27,19 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Consumer;
 
-@AllArgsConstructor
-@Slf4j
 @Configuration
-public class ResourceProcessorEventListener {
-    private static final Logger LOGGER = LoggerFactory.getLogger(ResourceProcessorEventListener.class);
-    private ResourceServiceClient resourceClient;
-    private SongServiceClient songClient;
+public class CreateResourceMetadataListener {
+    private static final Logger LOGGER = LoggerFactory.getLogger(CreateResourceMetadataListener.class);
+    public static final String PROCESS_SONG_METADATA_OUT = "processSongMetadata-out-0";
+    private final ResourceServiceClient resourceClient;
+    private final SongServiceClient songClient;
+    private final ProcessSongMetadataPublisher processSongMetadataPublisher;
+    public CreateResourceMetadataListener(ResourceServiceClient resourceClient, SongServiceClient songClient,
+                                         ProcessSongMetadataPublisher processSongMetadataPublisher) {
+        this.resourceClient = resourceClient;
+        this.songClient = songClient;
+        this.processSongMetadataPublisher = processSongMetadataPublisher;
+    }
 
     @Bean
     public Consumer<Message<String>> createResourceMetadata() {
@@ -42,6 +50,8 @@ public class ResourceProcessorEventListener {
                 SongMetadata metadata = retrieveFileMetadata(resourceData);
                 metadata.setResourceId(Integer.valueOf(resourceId));
                 songClient.saveResourceMetadata(metadata);
+                processSongMetadataPublisher.sendProcessedSongMetadataEvent(PROCESS_SONG_METADATA_OUT,
+                    MessageBuilder.withPayload(resourceId).build());
                 LOGGER.info("Processed resource ID: {}", resourceId);
             } catch (Exception e) {
                 throw new RuntimeException(e); // triggers retry & DLQ

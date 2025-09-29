@@ -1,0 +1,29 @@
+server:
+  port: 8888
+
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_SERVER_DEFAULT_ZONE:http://localhost:8761/eureka/}
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always
+spring:
+  application:
+    name: config-server
+
+  cloud:
+    config:
+      server:
+        git:
+          uri: ${SPRING_CLOUD_CONFIG_SERVER_GIT_URI:https://github.com/astghikaramyan/config-repo.git}   # URL to your git repo
+          clone-on-start: true                        # Clone repo on startup
+          default-label: main                          # Default branch
+        native:
+          search-locations: classpath:/config
+

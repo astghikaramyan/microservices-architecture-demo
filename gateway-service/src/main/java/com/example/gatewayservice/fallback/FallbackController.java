@@ -28,6 +28,15 @@ public class FallbackController {
         ));
   }
 
+  // Resource service fallback
+  @RequestMapping("/fallback/storage-metadata")
+  public ResponseEntity<Map<String, String>> storageMetadataServiceFallback() {
+    return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+        .body(Map.of(
+            "error", "Storage metadata service is currently unavailable. Please try again later."
+        ));
+  }
+
   // Undefined route fallback
   @RequestMapping("/fallback")
   public ResponseEntity<Map<String, String>> fallback() {

@@ -50,6 +50,21 @@
         </dependency>
 
         <dependency>
+            <groupId>io.github.resilience4j</groupId>
+            <artifactId>resilience4j-spring-boot3</artifactId>
+            <version>2.0.2</version>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-aop</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <version>1.18.34</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
             <scope>runtime</scope>
@@ -75,6 +90,11 @@
         <dependency>
             <groupId>org.springframework.cloud</groupId>
             <artifactId>spring-cloud-starter-stream-rabbit</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.github.resilience4j</groupId>
+            <artifactId>resilience4j-core</artifactId>
+            <version>2.2.0</version>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -198,18 +218,6 @@
             <version>${pact.pactjunit5.version}</version>
             <scope>test</scope>
         </dependency>
-
-<!--        &lt;!&ndash; Spring Cloud Contract &ndash;&gt;-->
-<!--        <dependency>-->
-<!--            <groupId>org.springframework.cloud</groupId>-->
-<!--            <artifactId>spring-cloud-starter-contract-verifier</artifactId>-->
-<!--            <scope>test</scope>-->
-<!--        </dependency>-->
-<!--        <dependency>-->
-<!--            <groupId>org.springframework.cloud</groupId>-->
-<!--            <artifactId>spring-cloud-starter-contract-stub-runner</artifactId>-->
-<!--            <scope>test</scope>-->
-<!--        </dependency>-->
     </dependencies>
     <dependencyManagement>
         <dependencies>
@@ -285,26 +293,6 @@
                     <pactDirectory>src/test/resources/contracts</pactDirectory>
                 </configuration>
             </plugin>
-<!--            <plugin>-->
-<!--                <groupId>org.springframework.cloud</groupId>-->
-<!--                <artifactId>spring-cloud-contract-maven-plugin</artifactId>-->
-<!--                <version>${spring-cloud-contract.version}</version>-->
-<!--                <extensions>true</extensions>-->
-<!--                <configuration>-->
-<!--                    <baseClassForTests>com.example.resourceservice.contract.ResourceBase</baseClassForTests>-->
-<!--                    <packageWithBaseClasses>com.example.resourceservice.contract</packageWithBaseClasses>-->
-<!--                    <contractsDirectory>${project.basedir}/src/test/resources/contracts</contractsDirectory>-->
-<!--                </configuration>-->
-<!--                <executions>-->
-<!--                    <execution>-->
-<!--                        <id>generate-contract-tests</id>-->
-<!--                        <goals>-->
-<!--                            <goal>convert</goal>-->
-<!--                            <goal>generateTests</goal>-->
-<!--                        </goals>-->
-<!--                    </execution>-->
-<!--                </executions>-->
-<!--            </plugin>-->
         </plugins>
         <testResources>
             <testResource>
