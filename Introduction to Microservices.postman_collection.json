@@ -1,7 +1,10 @@
 {
 	"info": {
+		"_postman_id": "00bc455a-bfbd-43f3-8ecc-cc555a94cf01",
 		"name": "Introduction to Microservices",
-		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "7844875",
+		"_collection_link": "https://blue-firefly-4764.postman.co/workspace/Microservices-demo~aad95a3c-5ec0-4d85-97c5-33ef6be200d5/collection/7844875-00bc455a-bfbd-43f3-8ecc-cc555a94cf01?action=share&source=collection_link&creator=7844875"
 	},
 	"item": [
 		{
@@ -1551,6 +1554,616 @@
 							"response": []
 						}
 					]
+				}
+			]
+		},
+		{
+			"name": "apps local run test",
+			"item": [
+				{
+					"name": "Upload Valid Mp3 Resource (200) Copy",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Request URL matches expected structure\", function () {\r",
+									"    var requestUrl = pm.request.url.toString();\r",
+									"    var resourceServiceUrl = pm.variables.get(\"resource_service_url\");\r",
+									"    var expectedBaseUrl = resourceServiceUrl + \"/resources\";\r",
+									"    pm.expect(requestUrl, `Expected URL to match ${expectedBaseUrl}`).to.equal(expectedBaseUrl);\r",
+									"});\r",
+									"\r",
+									"var jsonData = pm.response.json();\r",
+									"if (jsonData.id) {\r",
+									"    pm.collectionVariables.set(\"id\", jsonData.id);\r",
+									"}\r",
+									"\r",
+									"pm.test(\"Status code is 200\", function () {\r",
+									"    pm.expect(pm.response.code, \"Expected status code to be 200\").to.equal(200);\r",
+									"});\r",
+									"\r",
+									"pm.test(\"Response contains 'id' field\", function () {\r",
+									"    var jsonData = pm.response.json();\r",
+									"    pm.expect(jsonData, \"Expected response to contain 'id' field\").to.have.property(\"id\");\r",
+									"});"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "audio/mpeg"
+							}
+						],
+						"body": {
+							"mode": "file",
+							"file": {
+								"src": ""
+							}
+						},
+						"url": {
+							"raw": "{{resource_service_url}}/resources",
+							"host": [
+								"{{resource_service_url}}"
+							],
+							"path": [
+								"resources"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Resources With Metadata (200) Copy",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Request URL matches expected structure\", function () {\r",
+									"    var requestUrl = pm.request.url.toString();\r",
+									"    var resourceServiceUrl = pm.variables.get(\"resource_service_url\");\r",
+									"    var dynamicId = pm.variables.get(\"id\");\r",
+									"    var expectedUrl = resourceServiceUrl + \"/resources?id=\" + dynamicId + \",101,102\";\r",
+									"    pm.expect(requestUrl, \"Expected request URL to match the expected structure\").to.equal(expectedUrl);\r",
+									"});\r",
+									"\r",
+									"pm.test(\"Request parameter includes dynamic 'id'\", function () {\r",
+									"    var requestUrl = pm.request.url.toString();\r",
+									"    var dynamicId = pm.variables.get(\"id\");\r",
+									"    pm.expect(requestUrl, `Expected request URL to include dynamic 'id' value: ${dynamicId}`).to.include(\"id=\" + dynamicId);\r",
+									"});\r",
+									"\r",
+									"pm.test(\"Request parameter includes 101\", function () {\r",
+									"    var requestParams = pm.request.url.query.toObject();\r",
+									"    pm.expect(requestParams, \"Expected request parameters to include 101\").to.have.property(\"id\").that.includes(\"101\");\r",
+									"});\r",
+									"\r",
+									"pm.test(\"Request parameter includes 102\", function () {\r",
+									"    var requestParams = pm.request.url.query.toObject();\r",
+									"    pm.expect(requestParams, \"Expected request parameters to include 102\").to.have.property(\"id\").that.includes(\"102\");\r",
+									"});\r",
+									"\r",
+									"pm.test(\"Status code is 200\", function () {\r",
+									"    pm.expect(pm.response.code, \"Expected status code to be 200\").to.equal(200);\r",
+									"});\r",
+									"\r",
+									"pm.test(\"Response contains 'ids' field\", function () {\r",
+									"    var jsonData = pm.response.json();\r",
+									"    pm.expect(jsonData, \"Expected response to contain 'ids' field\").to.have.property(\"ids\");\r",
+									"});\r",
+									"\r",
+									"pm.test(\"'ids' field is an array\", function () {\r",
+									"    var jsonData = pm.response.json();\r",
+									"    pm.expect(jsonData.ids, \"Expected 'ids' to be an array\").to.be.an(\"array\");\r",
+									"});\r",
+									"\r",
+									"pm.test(\"Each element in 'ids' array is a number\", function () {\r",
+									"    var jsonData = pm.response.json();\r",
+									"    jsonData.ids.forEach(function (id) {\r",
+									"        pm.expect(id, \"Expected each element in 'ids' to be a number\").to.be.a(\"number\");\r",
+									"    });\r",
+									"});\r",
+									"\r",
+									"pm.test(\"'ids' array does not contain 101\", function () {\r",
+									"    var jsonData = pm.response.json();\r",
+									"    pm.expect(jsonData.ids, \"Expected 'ids' to not contain 101\").to.not.include(101);\r",
+									"});\r",
+									"\r",
+									"pm.test(\"'ids' array does not contain 102\", function () {\r",
+									"    var jsonData = pm.response.json();\r",
+									"    pm.expect(jsonData.ids, \"Expected 'ids' to not contain 102\").to.not.include(102);\r",
+									"});\r",
+									"\r",
+									""
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{resource_service_url}}/resources?id={{id}},101,102",
+							"host": [
+								"{{resource_service_url}}"
+							],
+							"path": [
+								"resources"
+							],
+							"query": [
+								{
+									"key": "id",
+									"value": "{{id}},101,102"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "test central configuration work",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Request URL matches expected structure\", function () {\r",
+									"    var requestUrl = pm.request.url.toString();\r",
+									"    var songServiceUrl = pm.variables.get(\"song_service_url\");\r",
+									"    var dynamicId = pm.variables.get(\"id\");\r",
+									"    var expectedUrl = songServiceUrl + \"/songs/\" + dynamicId;\r",
+									"    pm.expect(requestUrl, \"Expected request URL to match the expected structure\").to.equal(expectedUrl);\r",
+									"});\r",
+									"\r",
+									"pm.test(\"Path variable 'id' is dynamic\", function () {\r",
+									"    var requestUrl = pm.request.url.toString();\r",
+									"    var dynamicId = pm.variables.get(\"id\");\r",
+									"    var expectedUrl = pm.variables.get(\"song_service_url\") + \"/songs/\" + dynamicId;\r",
+									"    pm.expect(requestUrl, \"Expected request URL to include dynamic 'id'\").to.equal(expectedUrl);\r",
+									"});\r",
+									"\r",
+									"pm.test(\"Status code is 404\", function () {\r",
+									"    pm.expect(pm.response.code, \"Expected status code to be 404\").to.equal(404);\r",
+									"});\r",
+									"\r",
+									"pm.test(\"Response is in JSON format\", function () {\r",
+									"    pm.expect(pm.response.headers.get(\"Content-Type\"), \"Expected Content-Type to be 'application/json'\")\r",
+									"      .to.equal(\"application/json\");\r",
+									"});\r",
+									"\r",
+									"pm.test(\"Response contains '404'\", function () {\r",
+									"    var responseBody = pm.response.text();\r",
+									"    pm.expect(responseBody, \"Expected response to contain '404'\").to.include(\"404\");\r",
+									"});\r",
+									""
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8081/config",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8081",
+							"path": [
+								"config"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "refresh central config",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Request URL matches expected structure\", function () {\r",
+									"    var requestUrl = pm.request.url.toString();\r",
+									"    var songServiceUrl = pm.variables.get(\"song_service_url\");\r",
+									"    var dynamicId = pm.variables.get(\"id\");\r",
+									"    var expectedUrl = songServiceUrl + \"/songs/\" + dynamicId;\r",
+									"    pm.expect(requestUrl, \"Expected request URL to match the expected structure\").to.equal(expectedUrl);\r",
+									"});\r",
+									"\r",
+									"pm.test(\"Path variable 'id' is dynamic\", function () {\r",
+									"    var requestUrl = pm.request.url.toString();\r",
+									"    var dynamicId = pm.variables.get(\"id\");\r",
+									"    var expectedUrl = pm.variables.get(\"song_service_url\") + \"/songs/\" + dynamicId;\r",
+									"    pm.expect(requestUrl, \"Expected request URL to include dynamic 'id'\").to.equal(expectedUrl);\r",
+									"});\r",
+									"\r",
+									"pm.test(\"Status code is 404\", function () {\r",
+									"    pm.expect(pm.response.code, \"Expected status code to be 404\").to.equal(404);\r",
+									"});\r",
+									"\r",
+									"pm.test(\"Response is in JSON format\", function () {\r",
+									"    pm.expect(pm.response.headers.get(\"Content-Type\"), \"Expected Content-Type to be 'application/json'\")\r",
+									"      .to.equal(\"application/json\");\r",
+									"});\r",
+									"\r",
+									"pm.test(\"Response contains '404'\", function () {\r",
+									"    var responseBody = pm.response.text();\r",
+									"    pm.expect(responseBody, \"Expected response to contain '404'\").to.include(\"404\");\r",
+									"});\r",
+									""
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8081/actuator/refresh",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8081",
+							"path": [
+								"actuator",
+								"refresh"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Existing Song Metadata (200) Copy",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Request URL matches expected structure\", function () {\r",
+									"    var requestUrl = pm.request.url.toString();\r",
+									"    var expectedBaseUrl = pm.variables.get(\"song_service_url\") + \"/songs/\";\r",
+									"    pm.expect(requestUrl.startsWith(expectedBaseUrl), \"Expected URL to start with the base song service URL\").to.be.true;\r",
+									"});\r",
+									"\r",
+									"pm.test(\"Path variable 'id' is dynamic\", function () {\r",
+									"    var requestUrl = pm.request.url.toString();\r",
+									"    var dynamicId = pm.variables.get(\"id\");\r",
+									"    var expectedUrl = pm.variables.get(\"song_service_url\") + \"/songs/\" + dynamicId;\r",
+									"    pm.expect(requestUrl, \"Expected request URL to include dynamic 'id'\").to.equal(expectedUrl);\r",
+									"});\r",
+									"\r",
+									"pm.test(\"Status code is 200\", function () {\r",
+									"    pm.expect(pm.response.code, \"Expected status code to be 200\").to.equal(200);\r",
+									"});\r",
+									"\r",
+									"pm.test(\"Response is in JSON format\", function () {\r",
+									"    pm.expect(pm.response.headers.get(\"Content-Type\"), \"Expected Content-Type to be 'application/json'\")\r",
+									"      .to.equal(\"application/json\");\r",
+									"});\r",
+									"\r",
+									"pm.test(\"Response contains 'id' field and it is not null\", function () {\r",
+									"    var jsonData = pm.response.json();\r",
+									"    pm.expect(jsonData, \"Expected response to contain 'id' field\").to.have.property(\"id\").and.to.not.be.null;\r",
+									"});\r",
+									"\r",
+									"pm.test(\"Response contains 'name' field and it is not null\", function () {\r",
+									"    var jsonData = pm.response.json();\r",
+									"    pm.expect(jsonData, \"Expected response to contain 'name' field\").to.have.property(\"name\").and.to.not.be.null;\r",
+									"});\r",
+									"\r",
+									"pm.test(\"Response contains 'artist' field and it is not null\", function () {\r",
+									"    var jsonData = pm.response.json();\r",
+									"    pm.expect(jsonData, \"Expected response to contain 'artist' field\").to.have.property(\"artist\").and.to.not.be.null;\r",
+									"});\r",
+									"\r",
+									"pm.test(\"Response contains 'album' field and it is not null\", function () {\r",
+									"    var jsonData = pm.response.json();\r",
+									"    pm.expect(jsonData, \"Expected response to contain 'album' field\").to.have.property(\"album\").and.to.not.be.null;\r",
+									"});\r",
+									"\r",
+									"pm.test(\"Response contains 'duration' field and it is not null\", function () {\r",
+									"    var jsonData = pm.response.json();\r",
+									"    pm.expect(jsonData, \"Expected response to contain 'duration' field\").to.have.property(\"duration\").and.to.not.be.null;\r",
+									"});\r",
+									"\r",
+									"pm.test(\"Response contains 'year' field and it is not null\", function () {\r",
+									"    var jsonData = pm.response.json();\r",
+									"    pm.expect(jsonData, \"Expected response to contain 'year' field\").to.have.property(\"year\").and.to.not.be.null;\r",
+									"});\r",
+									"\r",
+									"pm.test(\"Response does not contain 'resourceId'\", function () {\r",
+									"    var responseBody = pm.response.text();\r",
+									"    pm.expect(responseBody, \"Response should not contain 'resourceId' field. Use 'id' field instead\").to.not.match(/\\bresourceId\\b/);\r",
+									"});\r",
+									"\r",
+									"pm.test(\"Response does not contain 'length'\", function () {\r",
+									"    var responseBody = pm.response.text();\r",
+									"    pm.expect(responseBody, \"Response should not contain 'length' field. Use 'duration' field instead\").to.not.match(/\\blength\\b/);\r",
+									"});\r",
+									"\r",
+									""
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{song_service_url}}/songs/{{id}}",
+							"host": [
+								"{{song_service_url}}"
+							],
+							"path": [
+								"songs",
+								"{{id}}"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Storage Metadata Service",
+			"item": [
+				{
+					"name": "Create Storage Metadata",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"storageType\": \"PERMANENT\",\n  \"bucket\": \"bucket_name\",\n  \"path\": \"/files\"\n}\n"
+						},
+						"url": {
+							"raw": "{{storage_metadata_service_url}}/storages",
+							"host": [
+								"{{storage_metadata_service_url}}"
+							],
+							"path": [
+								"storages"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create Storage Metadata invalid storage type",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"storageType\": \"UNKNOWN\",\n  \"bucket\": \"bucket_name\",\n  \"path\": \"/files\"\n}\n"
+						},
+						"url": {
+							"raw": "{{storage_metadata_service_url}}/storages",
+							"host": [
+								"{{storage_metadata_service_url}}"
+							],
+							"path": [
+								"storages"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Storage Metadata",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"disabled": true
+							}
+						],
+						"url": {
+							"raw": "{{storage_metadata_service_url}}/storages",
+							"host": [
+								"{{storage_metadata_service_url}}"
+							],
+							"path": [
+								"storages"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"disabled": true
+							}
+						],
+						"url": {
+							"raw": "{{storage_metadata_service_url}}/storages?ids=1",
+							"host": [
+								"{{storage_metadata_service_url}}"
+							],
+							"path": [
+								"storages"
+							],
+							"query": [
+								{
+									"key": "ids",
+									"value": "1"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Invalid CSV - Letters (400)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"disabled": true
+							}
+						],
+						"url": {
+							"raw": "{{storage_metadata_service_url}}/storages?ids=1,2,3,4,V",
+							"host": [
+								"{{storage_metadata_service_url}}"
+							],
+							"path": [
+								"storages"
+							],
+							"query": [
+								{
+									"key": "ids",
+									"value": "1,2,3,4,V"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Invalid CSV - Length (400)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"disabled": true
+							}
+						],
+						"url": {
+							"raw": "{{storage_metadata_service_url}}/storages?ids=1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74",
+							"host": [
+								"{{storage_metadata_service_url}}"
+							],
+							"path": [
+								"storages"
+							],
+							"query": [
+								{
+									"key": "ids",
+									"value": "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74"
+								}
+							]
+						}
+					},
+					"response": []
 				}
 			]
 		}

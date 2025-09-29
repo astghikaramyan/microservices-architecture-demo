@@ -1,5 +1,7 @@
 package com.example.resourceservice.controller;
 
+import static com.example.resourceservice.constants.Constants.BAD_REQUEST_NOT_NUMBER_ERROR_MESSAGE;
+
 import com.example.resourceservice.exception.*;
 import com.example.resourceservice.model.ErrorResponse;
 import org.springframework.http.HttpStatus;
@@ -10,8 +12,6 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import java.util.Objects;
-
-import static com.example.resourceservice.service.ResourceService.BAD_REQUEST_NOT_NUMBER_ERROR_MESSAGE;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {

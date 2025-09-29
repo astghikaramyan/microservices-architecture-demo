@@ -1,0 +1,41 @@
+server:
+  port: 8086
+
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_SERVER_DEFAULT_ZONE:http://localhost:8761/eureka/}
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always
+spring:
+  application:
+    name: storage-metadata-service
+
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5435/STORAGE_METADATA_DB}
+    username: ${POSTGRES_USER:myuser}
+    password: ${POSTGRES_PASSWORD:mypass}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: none
+
+s3:
+  endpoint: ${S3_ENDPOINT:http://localhost:4566}
+  access-key: ${S3_ACCESS_KEY:test}
+  secret-key: ${S3_SECRET_KEY:test}
+  permanent-bucket-name: ${S3_BUCKET_PERMANENT:permanent-resource-files}
+  staging-bucket-name: ${S3_BUCKET_STAGING:staging-resource-files}
+  permanent-files-path: ${S3_BUCKET_PERMANENT_FILES_PATH:/permanent-resource-files}
+  staging-files-path: ${S3_BUCKET_STAGING_FILES_PATH:/staging-resource-files}
+  region: ${S3_REGION:us-east-1}

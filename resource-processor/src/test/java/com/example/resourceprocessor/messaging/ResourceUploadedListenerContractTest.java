@@ -9,8 +9,10 @@ import au.com.dius.pact.core.model.V4Pact;
 import au.com.dius.pact.core.model.annotations.Pact;
 import com.example.resourceprocessor.client.ResourceServiceClient;
 import com.example.resourceprocessor.client.SongServiceClient;
+import com.example.resourceprocessor.messaging.consumer.CreateResourceMetadataListener;
+import com.example.resourceprocessor.messaging.publisher.ProcessSongMetadataPublisher;
 import com.example.resourceprocessor.model.SongMetadata;
-import com.example.resourceprocessor.service.ResourceProcessorEventListener;
+
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -38,9 +40,12 @@ public class ResourceUploadedListenerContractTest {
 
     @Mock
     private ResourceServiceClient resourceServiceClient;
+    @Mock
+    private ProcessSongMetadataPublisher processSongMetadataPublisher;
+
 
     @InjectMocks
-    private ResourceProcessorEventListener resourceUploadedListener;
+    private CreateResourceMetadataListener resourceUploadedListener;
 
     @Pact(consumer = "resource-processor", provider = "resource-service")
     public V4Pact resourceUploadedMessagePact(PactBuilder builder) {

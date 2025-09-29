@@ -167,7 +167,7 @@ class ResourceServiceIntegrationTest {
         byte[] audioData = "dummy audio data".getBytes();
 
         // Write file to S3 (LocalStack)
-        storageService.addFileBytesToStorage("test-key", audioData);
+        storageService.addFileBytesToStorage("test-key", audioData, "test-bucket");
 
         mockMvc.perform(post("/resources")
                         .content(audioData)
@@ -176,7 +176,7 @@ class ResourceServiceIntegrationTest {
                 .andExpect(jsonPath("$.id").exists());
 
         List<ResourceEntity> resources = resourceRepository.findAll();
-        assertThat(storageService.retrieveFileFromStorage("test-key").asByteArray()).isEqualTo(audioData);
+        assertThat(storageService.retrieveFileFromStorage("test-key", "test-bucket").asByteArray()).isEqualTo(audioData);
         assertThat(resources).hasSize(1);
     }
 
@@ -213,7 +213,7 @@ class ResourceServiceIntegrationTest {
                 .orElseThrow(() -> new AssertionError("Resource not found"));
         assertThat(found.getFileName()).isEqualTo("dummy audio");
         assertThat(found.getS3Key()).isEqualTo("s3Key");
-        assertThat(storageService.retrieveFileFromStorage("s3Key").asByteArray()).isEqualTo(audioData);
+        assertThat(storageService.retrieveFileFromStorage("s3Key", "test-bucket").asByteArray()).isEqualTo(audioData);
     }
 
     // -----------------------------
@@ -242,7 +242,7 @@ class ResourceServiceIntegrationTest {
         assertThat(resourceRepository.findById(entity.getId())).isEmpty();
         assertThrows(
                 StorageException.class,
-                () -> storageService.retrieveFileFromStorage("s3Key")
+                () -> storageService.retrieveFileFromStorage("s3Key", "test-bucket")
         );
     }
 

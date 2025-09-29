@@ -1,5 +1,7 @@
 package com.example.resourceservice.controller;
 
+import static com.example.resourceservice.constants.Constants.BAD_REQUEST_RESPONSE_CODE;
+
 import com.example.resourceservice.entity.ResourceEntity;
 import com.example.resourceservice.exception.InvalidDataException;
 import com.example.resourceservice.service.ResourceService;
@@ -12,8 +14,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-
-import static com.example.resourceservice.service.ResourceService.BAD_REQUEST_RESPONSE_CODE;
 
 @RestController
 @RequestMapping("/resources")

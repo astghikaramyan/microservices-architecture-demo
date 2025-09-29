@@ -1,10 +1,10 @@
-package com.example.resource_processor;
+package com.example.storageservice;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
 @SpringBootTest
-class ResourceProcessorApplicationTests {
+class StorageEntityMetadataServiceApplicationTests {
 
 	@Test
 	void contextLoads() {
