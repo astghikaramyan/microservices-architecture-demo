@@ -2,6 +2,8 @@ package com.example.resourceprocessor.service;
 
 import com.example.resourceprocessor.client.ResourceServiceClient;
 import com.example.resourceprocessor.client.SongServiceClient;
+import com.example.resourceprocessor.messaging.consumer.CreateResourceMetadataListener;
+import com.example.resourceprocessor.messaging.publisher.ProcessSongMetadataPublisher;
 import com.example.resourceprocessor.model.SongMetadata;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -19,16 +21,19 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
-class ResourceProcessorEventListenerTest {
+class CreateResourceMetadataListenerTest {
 
     @Mock
     private ResourceServiceClient resourceClient;
 
     @Mock
     private SongServiceClient songClient;
+    @Mock
+    private ProcessSongMetadataPublisher processSongMetadataPublisher;
+
 
     @InjectMocks
-    private ResourceProcessorEventListener listener;
+    private CreateResourceMetadataListener listener;
 
     @BeforeEach
     void setUp() {
@@ -116,7 +121,7 @@ class ResourceProcessorEventListenerTest {
     // ---- Reflection helpers ----
     private String invokeFormatDuration(String input) {
         try {
-            var method = ResourceProcessorEventListener.class.getDeclaredMethod("formatDuration", String.class);
+            var method = CreateResourceMetadataListener.class.getDeclaredMethod("formatDuration", String.class);
             method.setAccessible(true);
             return (String) method.invoke(listener, input);
         } catch (Exception e) {
@@ -126,7 +131,7 @@ class ResourceProcessorEventListenerTest {
 
     private String invokeResolveEmptyField(String input) {
         try {
-            var method = ResourceProcessorEventListener.class.getDeclaredMethod("resolveEmptyField", String.class);
+            var method = CreateResourceMetadataListener.class.getDeclaredMethod("resolveEmptyField", String.class);
             method.setAccessible(true);
             return (String) method.invoke(listener, input);
         } catch (Exception e) {
@@ -136,7 +141,7 @@ class ResourceProcessorEventListenerTest {
 
     private String invokeResolveEmptyLength(String input) {
         try {
-            var method = ResourceProcessorEventListener.class.getDeclaredMethod("resolveEmptyLength", String.class);
+            var method = CreateResourceMetadataListener.class.getDeclaredMethod("resolveEmptyLength", String.class);
             method.setAccessible(true);
             return (String) method.invoke(listener, input);
         } catch (Exception e) {
@@ -146,7 +151,7 @@ class ResourceProcessorEventListenerTest {
 
     private String invokeResolveEmptyYear(String input) {
         try {
-            var method = ResourceProcessorEventListener.class.getDeclaredMethod("resolveEmptyYear", String.class);
+            var method = CreateResourceMetadataListener.class.getDeclaredMethod("resolveEmptyYear", String.class);
             method.setAccessible(true);
             return (String) method.invoke(listener, input);
         } catch (Exception e) {

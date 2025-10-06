@@ -113,7 +113,7 @@ class ResourceServiceComponentTest {
     void testUploadResource() throws Exception {
         byte[] audioData = "dummy audio data".getBytes();
 
-        doNothing().when(storageService).addFileBytesToStorage(any(String.class), any(byte[].class));
+        doNothing().when(storageService).addFileBytesToStorage(any(String.class), any(byte[].class), anyString());
 
         mockMvc.perform(post("/resources")
                         .content(audioData)
@@ -124,7 +124,7 @@ class ResourceServiceComponentTest {
         List<ResourceEntity> resources = resourceRepository.findAll();
         assertThat(resources).hasSize(1);
 
-        verify(storageService).addFileBytesToStorage(any(String.class), any(byte[].class));
+        verify(storageService).addFileBytesToStorage(any(String.class), any(byte[].class), anyString());
     }
 
     // -----------------------------
@@ -141,7 +141,7 @@ class ResourceServiceComponentTest {
 
         byte[] audioData = "dummy bytes".getBytes();
 
-        when(storageService.retrieveFileFromStorage("s3Key"))
+        when(storageService.retrieveFileFromStorage("s3Key","test-bucket"))
                 .thenReturn(ResponseBytes.fromByteArray(getObjectResponse, audioData));
 
         mockMvc.perform(get("/resources/{id}", entity.getId())
@@ -164,7 +164,7 @@ class ResourceServiceComponentTest {
         resourceRepository.save(entity);
         byte[] audioData = "dummy bytes".getBytes();
 
-        when(storageService.retrieveFileFromStorage("s3Key"))
+        when(storageService.retrieveFileFromStorage("s3Key", "test-bucket"))
                 .thenReturn(ResponseBytes.fromByteArray(getObjectResponse, audioData));
         doNothing().when(songServiceClient).deleteResourceMetadataByResourceId(entity.getId());
 
@@ -174,6 +174,6 @@ class ResourceServiceComponentTest {
                 .andExpect(jsonPath("$").exists());
 
         assertThat(resourceRepository.findById(entity.getId())).isEmpty();
-        verify(storageService).deleteResourceFromStorage(any(String.class));
+        verify(storageService).deleteResourceFromStorage(any(String.class), any(String.class));
     }
 }

@@ -32,7 +32,7 @@ public class MockExternalServicesConfig {
         ResponseBytes<GetObjectResponse> objectBytes =
                 ResponseBytes.fromByteArray(response, "hello".getBytes(StandardCharsets.UTF_8));
 
-        when(mockStorage.retrieveFileFromStorage(anyString())).thenReturn(objectBytes);
+        when(mockStorage.retrieveFileFromStorage(anyString(), anyString())).thenReturn(objectBytes);
 
         return mockStorage;
     }

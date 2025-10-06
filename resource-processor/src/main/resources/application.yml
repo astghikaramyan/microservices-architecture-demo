@@ -18,12 +18,16 @@ spring:
 
   cloud:
     function:
-      definition: createResourceMetadata;auditDeleteResourceMetadata
+      definition: createResourceMetadata
     stream:
       bindings:
         createResourceMetadata-in-0:
-          destination: ${APP_RABBITMQ_EXCHANGE:resource.exchange}
-          group: ${APP_RABBITMQ_GROUP:createMetadata}
+          destination: ${APP_RABBITMQ_RESOURCE_EXCHANGE:resource.exchange}
+          group: ${APP_RABBITMQ_RESOURCE_GROUP:createResource}
+          content-type: text/plain
+
+        processSongMetadata-out-0:
+          destination: ${APP_RABBITMQ_METADATA_EXCHANGE:metadata.exchange}
           content-type: text/plain
       rabbit:
         bindings:
