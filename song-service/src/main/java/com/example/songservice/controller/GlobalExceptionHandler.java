@@ -4,7 +4,10 @@ import com.example.songservice.exception.ConflictDataException;
 import com.example.songservice.exception.InvalidDataException;
 import com.example.songservice.exception.NotFoundException;
 import com.example.songservice.model.ErrorResponse;
+
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -18,22 +21,30 @@ import static com.example.songservice.service.SongService.BAD_REQUEST_NOT_NUMBER
 public class GlobalExceptionHandler {
     @ExceptionHandler({NotFoundException.class})
     private ResponseEntity<Object> handleNotFoundException(final NotFoundException notFoundException) {
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Objects.nonNull(notFoundException.getErrorResponse()) ? notFoundException.getErrorResponse() : notFoundException.getSimpleErrorResponse());
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        return new ResponseEntity<>(Objects.nonNull(notFoundException.getErrorResponse()) ? notFoundException.getErrorResponse() : notFoundException.getSimpleErrorResponse(), headers, HttpStatus.NOT_FOUND);
     }
 
     @ExceptionHandler({NumberFormatException.class})
     private ResponseEntity<Object> handleNumberFormatException(final NumberFormatException numberFormatException) {
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(numberFormatException.getMessage());
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        return new ResponseEntity<>(numberFormatException.getMessage(), headers, HttpStatus.BAD_REQUEST);
     }
 
     @ExceptionHandler({IllegalArgumentException.class})
     private ResponseEntity<Object> handleIllegalArgumentException(final IllegalArgumentException illegalArgumentException) {
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(illegalArgumentException.getMessage());
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        return new ResponseEntity<>(illegalArgumentException.getMessage(), headers, HttpStatus.BAD_REQUEST);
     }
 
     @ExceptionHandler({InvalidDataException.class})
     private ResponseEntity<Object> handleInvalidDataException(final InvalidDataException invalidDataException) {
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Objects.nonNull(invalidDataException.getErrorResponse()) ? invalidDataException.getErrorResponse() : invalidDataException.getSimpleErrorResponse());
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        return new ResponseEntity<>(Objects.nonNull(invalidDataException.getErrorResponse()) ? invalidDataException.getErrorResponse() : invalidDataException.getSimpleErrorResponse(), headers, HttpStatus.BAD_REQUEST);
     }
 
     @ExceptionHandler({MethodArgumentTypeMismatchException.class})
@@ -41,12 +52,16 @@ public class GlobalExceptionHandler {
         ErrorResponse errorResponse = new ErrorResponse();
         errorResponse.setErrorMessage(String.format(BAD_REQUEST_NOT_NUMBER_ERROR_MESSAGE, methodArgumentTypeMismatchException.getValue()));
         errorResponse.setErrorCode("400");
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        return new ResponseEntity<>(errorResponse, headers, HttpStatus.BAD_REQUEST);
     }
 
     @ExceptionHandler({ConflictDataException.class})
     private ResponseEntity<Object> handleConflictDataException(final ConflictDataException conflictDataException) {
-        return ResponseEntity.status(HttpStatus.CONFLICT).body(conflictDataException.getSimpleErrorResponse());
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        return new ResponseEntity<>(conflictDataException.getSimpleErrorResponse(), headers, HttpStatus.CONFLICT);
     }
 
     @ExceptionHandler({Exception.class})
@@ -54,6 +69,8 @@ public class GlobalExceptionHandler {
         ErrorResponse errorResponse = new ErrorResponse();
         errorResponse.setErrorMessage(ex.getMessage());
         errorResponse.setErrorCode("500");
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        return new ResponseEntity<>(errorResponse, headers, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 }

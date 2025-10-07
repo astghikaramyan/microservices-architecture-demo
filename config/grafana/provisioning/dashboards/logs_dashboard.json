@@ -1,0 +1,24 @@
+{
+  "title": "Microservices Logs",
+  "schemaVersion": 30,
+  "version": 1,
+  "panels": [
+    {
+      "type": "logs",
+      "title": "Service Logs",
+      "datasource": "Elasticsearch",
+      "targets": [
+        {
+          "query": "*",
+          "refId": "A"
+        }
+      ],
+      "gridPos": {
+        "h": 12,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      }
+    }
+  ]
+}

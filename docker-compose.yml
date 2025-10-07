@@ -8,6 +8,12 @@ services:
     env_file: .env
     environment:
       EUREKA_SERVER_DEFAULT_ZONE: ${EUREKA_SERVER_DEFAULT}
+      SERVICE_NAME: ${EUREKA_SERVICE_NAME}
+      LOG_DIR: ${LOG_DIR}
+      LOGSTASH_HOST: ${LOGSTASH_HOST}
+      LOGSTASH_PORT: ${LOGSTASH_PORT}
+    volumes:
+      - ./config/logging/log4j2.xml:/app/config/log4j2.xml
     restart: always
     healthcheck:
       test: [ "CMD", "curl", "-fsS", "http://localhost:8761/actuator/health" ]
@@ -25,6 +31,12 @@ services:
     env_file: .env
     environment:
       EUREKA_SERVER_DEFAULT_ZONE: ${EUREKA_SERVER_DEFAULT}
+      SERVICE_NAME: ${STORAGE_METADATA_SERVICE_NAME}
+      LOG_DIR: ${LOG_DIR}
+      LOGSTASH_HOST: ${LOGSTASH_HOST}
+      LOGSTASH_PORT: ${LOGSTASH_PORT}
+    volumes:
+      - ./config/logging/log4j2.xml:/app/config/log4j2.xml
     restart: always
     depends_on:
       eureka-server:
@@ -143,6 +155,12 @@ services:
       EUREKA_SERVER_DEFAULT_ZONE: ${EUREKA_SERVER_DEFAULT}
       SPRING_DATASOURCE_URL: ${SONG_DB_URL}
       SPRING_CONFIG_IMPORT: ${CONFIG_URI}
+      SERVICE_NAME: ${SONG_SERVICE_NAME}
+      LOG_DIR: ${LOG_DIR}
+      LOGSTASH_HOST: ${LOGSTASH_HOST}
+      LOGSTASH_PORT: ${LOGSTASH_PORT}
+    volumes:
+      - ./config/logging/log4j2.xml:/app/config/log4j2.xml
     restart: always
     depends_on:
       song_db:
@@ -180,6 +198,12 @@ services:
       APP_RABBITMQ_RESOURCE_GROUP: ${APP_RABBITMQ_GROUP:-createResource}
       APP_RABBITMQ_METADATA_EXCHANGE: ${APP_RABBITMQ_METADATA_EXCHANGE:-metadata.exchange}
       APP_RABBITMQ_METADATA_GROUP: ${APP_RABBITMQ_METADATA_GROUP:-processMetadata}
+      SERVICE_NAME: ${RESOURCE_PROCESSOR_SERVICE_NAME}
+      LOG_DIR: ${LOG_DIR}
+      LOGSTASH_HOST: ${LOGSTASH_HOST}
+      LOGSTASH_PORT: ${LOGSTASH_PORT}
+    volumes:
+      - ./config/logging/log4j2.xml:/app/config/log4j2.xml
     restart: always
     depends_on:
       eureka-server:
@@ -225,6 +249,12 @@ services:
       #  - JAVA_TOOL_OPTIONS=--add-opens=java.base/java.lang=ALL-UNNAMED -javaagent:/local/agent/org.jacoco.agent-runtime.jar=destfile=/local/coverage-reports/jacoco.exec -Dspring.profiles.active=if-enabled
       #        - JAVA_TOOL_OPTIONS=-javaagent:/local/agent/seeker-agent.jar -Dseeker.server.url=http://iadd1slascap001.ihgint.global -Dseeker.project.key=avlsb1"
       JAVA_TOOL_OPTIONS: ${DEBUG_CONFIG}
+      SERVICE_NAME: ${RESOURCE_SERVICE_NAME}
+      LOG_DIR: ${LOG_DIR}
+      LOGSTASH_HOST: ${LOGSTASH_HOST}
+      LOGSTASH_PORT: ${LOGSTASH_PORT}
+    volumes:
+      - ./config/logging/log4j2.xml:/app/config/log4j2.xml
     restart: always
     depends_on:
       eureka-server:
@@ -264,7 +294,13 @@ services:
       S3_BUCKET_PERMANENT_FILES_PATH: ${S3_BUCKET_PERMANENT_FILES_PATH}
       S3_BUCKET_STAGING_FILES_PATH: ${S3_BUCKET_STAGING_FILES_PATH}
       S3_REGION: ${S3_REGION}
+      SERVICE_NAME: ${STORAGE_METADATA_SERVICE_NAME}
+      LOG_DIR: ${LOG_DIR}
+      LOGSTASH_HOST: ${LOGSTASH_HOST}
+      LOGSTASH_PORT: ${LOGSTASH_PORT}
     restart: always
+    volumes:
+      - ./config/logging/log4j2.xml:/app/config/log4j2.xml
     depends_on:
       eureka-server:
         condition: service_healthy
@@ -298,5 +334,128 @@ services:
       eureka-server:
         condition: service_healthy
 
+  # -----------------
+  # Monitoring
+  # -----------------
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    volumes:
+      - ./config/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "9090:9090"
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--log.level=info'                               # shows everything
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: "2g"
+    healthcheck:
+      test: [ "CMD", "wget", "-q", "--spider", "http://localhost:9090/-/ready" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # -----------------
+  # Grafana
+  # -----------------
+  grafana:
+    image: grafana/grafana:latest
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_DASHBOARDS_JSON_ENABLED=true
+      - GF_DASHBOARDS_JSON_PATH=/etc/grafana/provisioning
+      - GF_LOG_LEVEL=info
+    ports:
+      - "3000:3000"
+    depends_on:
+      prometheus:
+        condition: service_healthy
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./config/grafana/provisioning:/etc/grafana/provisioning
+    healthcheck:
+      test: [ "CMD", "wget", "-q", "--spider", "http://localhost:3000/api/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # -----------------
+  # ELK Stack
+  # -----------------
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.15.0
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - logger.level=info     # enable DEBUG logs
+    ports:
+      - "9200:9200"
+    volumes:
+      - es-data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -s http://localhost:9200/_cluster/health | grep -q '\"status\":\"green\"'" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+
+  logstash:
+    image: docker.elastic.co/logstash/logstash:8.15.0
+    volumes:
+      - ./config/logstash/logstash.conf:/usr/share/logstash/pipeline/logstash.conf
+    ports:
+      - "5000:5000"
+    environment:
+      - LS_JAVA_OPTS=-Xms512m -Xmx512m
+      - LOG_LEVEL=info
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:9600/_node/pipelines?pretty" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.15.0
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+      - LOGGING_VERBOSE=true   # enables debug-like output
+    ports:
+      - "5601:5601"
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:5601/api/status" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # -----------------
+  # Kibana Initializer (auto import NDJSON)
+  # -----------------
+  kibana-setup:
+    image: curlimages/curl:8.6.0
+    depends_on:
+      kibana:
+        condition: service_healthy
+    volumes:
+      - ./config/kibana/kibana-objects.ndjson:/tmp/kibana-objects.ndjson:ro
+    entrypoint: > 
+      sh -c "echo 'Waiting for Kibana...' && sleep 15 && echo 'Creating Elasticsearch index template...' && curl -X PUT http://elasticsearch:9200/_index_template/logs_template -H 'Content-Type: application/json' -d '{\"index_patterns\":[\"logs-*\"],\"template\":{\"settings\":{\"number_of_shards\":1,\"number_of_replicas\":0},\"mappings\":{\"properties\":{\"service_name\":{\"type\":\"keyword\"},\"thread\":{\"type\":\"keyword\"},\"level\":{\"type\":\"keyword\"},\"logger\":{\"type\":\"keyword\"},\"message\":{\"type\":\"text\"},\"traceId\":{\"type\":\"keyword\"},\"@timestamp\":{\"type\":\"date\"}}}}}' && echo 'Importing Kibana NDJSON objects...' && curl -X POST http://kibana:5601/api/saved_objects/_import?overwrite=true -H 'kbn-xsrf: true' --form file=@/tmp/kibana-objects.ndjson"
+    restart: "on-failure"
+
 volumes:
   rabbitmq_data:
+  grafana-data:
+  es-data:

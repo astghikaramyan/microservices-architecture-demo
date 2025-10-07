@@ -10,4 +10,5 @@ WORKDIR /app
 RUN apk add --no-cache curl
 COPY --from=build /app/target/*.jar app.jar
 EXPOSE 8080
-CMD ["java", "-jar", "app.jar"]
+# The log4j2.xml will be mounted at /app/config/log4j2.xml
+CMD ["java", "-Dlog4j.configurationFile=/app/config/log4j2.xml", "-jar", "app.jar"]

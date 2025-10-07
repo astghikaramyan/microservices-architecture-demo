@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="WARN" monitorInterval="10">
+  <Properties>
+    <!-- Log format -->
+    <Property name="LOG_PATTERN">%d{ISO8601} [%t] %-5level %logger{36} [traceId=%X{traceId}, spanId=%X{spanId}] - %msg%n</Property>
+
+    <!-- Service name -->
+    <Property name="SERVICE_NAME">${env:SERVICE_NAME:-default-service}</Property>
+
+    <!-- Logstash host/port -->
+    <Property name="LOGSTASH_HOST">${env:LOGSTASH_HOST:-logstash}</Property>
+    <Property name="LOGSTASH_PORT">${env:LOGSTASH_PORT:-5000}</Property>
+
+    <!-- Local log directory -->
+    <Property name="LOG_DIR">${env:LOG_DIR:-/var/log/containers}</Property>
+  </Properties>
+
+  <Appenders>
+    <!-- Console logging/output -->
+    <Console name="ConsoleAppender" target="SYSTEM_OUT">
+      <PatternLayout pattern="${LOG_PATTERN}"/>
+    </Console>
+
+    <!-- Logstash JSON logging for centralized ELK stack -->
+    <!-- Socket Appender for Logstash -->
+    <!-- Logstash JSON appender -->
+    <Socket name="LogstashAppender"
+        host="${LOGSTASH_HOST}"
+        port="${LOGSTASH_PORT}">
+      <JsonLayout
+          compact="true"
+          eventEol="true"
+          stacktraceAsString="true"
+          includeTimeMillis="true"
+          includeThreadName="true"
+          includeLoggerName="true"
+          includeLevel="true"
+          includeMessage="true"
+          includeStacktrace="true"
+          includeContextMap="true"
+          properties="true">
+        <!-- Replicating console pattern -->
+        <KeyValuePair key="service_name" value="${SERVICE_NAME}"/>
+      </JsonLayout>
+    </Socket>
+
+
+    <!-- RollingFile logging for local backup and rotation -->
+<!--    <RollingFile name="RollingFile"-->
+<!--        fileName="${LOG_DIR}/${SERVICE_NAME}.log"-->
+<!--        filePattern="${LOG_DIR}/${SERVICE_NAME}-%d{yyyy-MM-dd-HH-mm}.log.gz">-->
+<!--      <PatternLayout pattern="${LOG_PATTERN}"/>-->
+<!--      <Policies>-->
+<!--        <SizeBasedTriggeringPolicy size="100 MB"/>-->
+<!--        <OnStartupTriggeringPolicy/>-->
+<!--      </Policies>-->
+<!--      <DefaultRolloverStrategy max="30"/>-->
+<!--    </RollingFile>-->
+  </Appenders>
+
+  <Loggers>
+    <Root level="INFO">
+      <AppenderRef ref="ConsoleAppender"/>
+      <Logger name="com.example.resourceservice.service.ResourceService" level="INFO" additivity="false">
+        <AppenderRef ref="LogstashAppender"/>
+        <AppenderRef ref="ConsoleAppender"/>
+      </Logger>
+      <Logger name="com.example.resourceprocessor.messaging.consumer.CreateResourceMetadataListener" level="INFO" additivity="false">
+        <AppenderRef ref="LogstashAppender"/>
+        <AppenderRef ref="ConsoleAppender"/>
+      </Logger>
+      <AppenderRef ref="LogstashAppender"/>
+<!--      <AppenderRef ref="RollingFile"/>-->
+    </Root>
+  </Loggers>
+</Configuration>

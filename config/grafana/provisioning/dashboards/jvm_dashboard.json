@@ -1,0 +1,50 @@
+{
+  "annotations": { "list": [] },
+  "panels": [
+    {
+      "title": "JVM Memory Usage (MB)",
+      "type": "graph",
+      "targets": [
+        {
+          "expr": "jvm_memory_used_bytes / 1024 / 1024",
+          "legendFormat": "{{job}} - used MB",
+          "refId": "A"
+        }
+      ],
+      "yaxes": [
+        { "format": "megabytes", "label": "Memory MB", "logBase": 1 }
+      ]
+    },
+    {
+      "title": "JVM Threads",
+      "type": "graph",
+      "targets": [
+        {
+          "expr": "jvm_threads_live_threads",
+          "legendFormat": "{{job}} - live threads",
+          "refId": "A"
+        }
+      ],
+      "yaxes": [
+        { "format": "short", "label": "Threads", "logBase": 1 }
+      ]
+    },
+    {
+      "title": "JVM GC Pause Time (seconds)",
+      "type": "graph",
+      "targets": [
+        {
+          "expr": "jvm_gc_pause_seconds_sum",
+          "legendFormat": "{{job}} - GC seconds",
+          "refId": "A"
+        }
+      ],
+      "yaxes": [
+        { "format": "seconds", "label": "GC Seconds", "logBase": 1 }
+      ]
+    }
+  ],
+  "schemaVersion": 30,
+  "title": "JVM Metrics",
+  "version": 1
+}

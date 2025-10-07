@@ -5,14 +5,24 @@ eureka:
   client:
     service-url:
       defaultZone: ${EUREKA_SERVER_DEFAULT_ZONE:http://localhost:8761/eureka/}
+    registryFetchIntervalSeconds: 30
+    heartbeatExecutorThreadPoolSize: 5
+    initialInstanceInfoReplicationIntervalSeconds: 40
 management:
   endpoints:
     web:
       exposure:
-        include: health,info
+        include: '*'
   endpoint:
     health:
       show-details: always
+  metrics:
+    enabled: true           # enables metrics endpoint
+    prometheus:
+      enabled: true
+    tags:
+      application: ${spring.application.name}
+
 spring:
   application:
     name: resource-service
@@ -81,3 +91,8 @@ s3:
   permanent-files-path: ${S3_BUCKET_PERMANENT_FILES_PATH:/permanent-resource-files}
   staging-files-path: ${S3_BUCKET_STAGING_FILES_PATH:/staging-resource-files}
   region: ${S3_REGION:us-east-1}
+
+#logstash:
+#  host: ${LOGSTASH_HOST:logstash}
+#  port: ${LOGSTASH_PORT:5000}
+#  queue-size: 512

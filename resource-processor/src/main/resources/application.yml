@@ -5,6 +5,9 @@ eureka:
   client:
     service-url:
       defaultZone: ${EUREKA_SERVER_DEFAULT_ZONE:http://localhost:8761/eureka/}
+    registryFetchIntervalSeconds: 30
+    heartbeatExecutorThreadPoolSize: 5
+    initialInstanceInfoReplicationIntervalSeconds: 40
 
 spring:
   application:
@@ -46,13 +49,24 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info
+        include: '*'
   endpoint:
     health:
       show-details: always
+  metrics:
+    enabled: true           # enables metrics endpoint
+    prometheus:
+      enabled: true
+    tags:
+      application: ${spring.application.name}
 song:
   service:
     url: ${SONG_SERVICE_URL:http://song-service:8081}
 resource:
   service:
     url: ${RESOURCE_SERVICE_URL:http://resource-service:8085}
+
+#logstash:
+#  host: ${LOGSTASH_HOST:logstash}
+#  port: ${LOGSTASH_PORT:5000}
+#  queue-size: 512

@@ -4,8 +4,8 @@ import java.util.List;
 import java.util.Objects;
 import java.util.function.Consumer;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.Message;
@@ -23,7 +23,7 @@ import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 
 @Configuration
 public class ProcessSongMetadataListener {
-  private static final Logger LOGGER = LoggerFactory.getLogger(ProcessSongMetadataListener.class);
+  private static final Logger LOGGER = LogManager.getLogger(ProcessSongMetadataListener.class);
   private final StorageService storageService;
   private final ResourceRepository resourceRepository;
   private final StorageMetadataServiceClient storageMetadataServiceClient;
