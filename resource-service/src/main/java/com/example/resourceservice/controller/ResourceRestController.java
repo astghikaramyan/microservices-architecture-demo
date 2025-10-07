@@ -6,6 +6,9 @@ import com.example.resourceservice.entity.ResourceEntity;
 import com.example.resourceservice.exception.InvalidDataException;
 import com.example.resourceservice.service.ResourceService;
 import com.example.resourceservice.util.DataPreparerService;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -18,6 +21,7 @@ import java.util.Objects;
 @RestController
 @RequestMapping("/resources")
 public class ResourceRestController {
+    private static final Logger LOGGER = LogManager.getLogger(ResourceRestController.class);
     @Autowired
     private ResourceService resourceService;
     @Autowired
@@ -26,10 +30,12 @@ public class ResourceRestController {
     @PostMapping(consumes = "audio/mpeg")
     public ResponseEntity<Map<String, Integer>> uploadResource(@RequestBody byte[] audioData) {
         try {
+            LOGGER.info("Upload resource request received.");
             final ResourceEntity resourceEntity = resourceService.uploadResource(audioData);
             if (Objects.nonNull(resourceEntity)) {
                 final Map<String, Integer> result = new HashMap<>();
                 result.put("id", resourceEntity.getId());
+                LOGGER.info("Upload resource with id :{}", resourceEntity.getId());
                 return ResponseEntity.ok(result);
             }
             throw new InvalidDataException("Validation failed");

@@ -2,8 +2,9 @@ package com.example.resourceservice.messaging.producer;
 
 import static com.example.resourceservice.constants.Constants.INTERNAL_SERVER_ERROR_RESPONSE_CODE;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.ThreadContext;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.springframework.cloud.stream.function.StreamBridge;
 import org.springframework.messaging.Message;
 import org.springframework.retry.annotation.Backoff;
@@ -16,7 +17,7 @@ import com.example.resourceservice.util.DataPreparerService;
 
 @Service
 public class CreateResourceMetadataPublisher {
-  private static final Logger LOGGER = LoggerFactory.getLogger(CreateResourceMetadataPublisher.class);
+  private static final Logger LOGGER = LogManager.getLogger(CreateResourceMetadataPublisher.class);
   private final StreamBridge streamBridge;
   private final DataPreparerService dataPreparerService;
   public CreateResourceMetadataPublisher(StreamBridge streamBridge, DataPreparerService dataPreparerService) {
