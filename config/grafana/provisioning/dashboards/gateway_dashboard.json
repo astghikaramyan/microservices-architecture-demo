@@ -1,0 +1,50 @@
+{
+  "annotations": { "list": [] },
+  "panels": [
+    {
+      "title": "HTTP Requests Count",
+      "type": "graph",
+      "targets": [
+        {
+          "expr": "sum(rate(http_server_requests_seconds_count[1m])) by (job, uri, status)",
+          "legendFormat": "{{job}} {{uri}} {{status}}",
+          "refId": "A"
+        }
+      ],
+      "yaxes": [
+        { "format": "short", "label": "Requests/sec", "logBase": 1 }
+      ]
+    },
+    {
+      "title": "HTTP Requests Latency (95th percentile)",
+      "type": "graph",
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(http_server_requests_seconds_bucket[1m])) by (le, job, uri))",
+          "legendFormat": "{{job}} {{uri}} 95th percentile",
+          "refId": "A"
+        }
+      ],
+      "yaxes": [
+        { "format": "seconds", "label": "Latency", "logBase": 1 }
+      ]
+    },
+    {
+      "title": "HTTP Errors (4xx/5xx)",
+      "type": "graph",
+      "targets": [
+        {
+          "expr": "sum(rate(http_server_requests_seconds_count{status=~\"4..|5..\"}[1m])) by (job)",
+          "legendFormat": "{{job}} 4xx/5xx errors",
+          "refId": "A"
+        }
+      ],
+      "yaxes": [
+        { "format": "short", "label": "Errors/sec", "logBase": 1 }
+      ]
+    }
+  ],
+  "schemaVersion": 30,
+  "title": "API Gateway Metrics",
+  "version": 1
+}

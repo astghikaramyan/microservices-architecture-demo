@@ -20,10 +20,12 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.ThreadContext;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.stream.function.StreamBridge;
+import org.springframework.messaging.Message;
 import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Recover;
@@ -52,7 +54,7 @@ import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 @Service
 public class ResourceService {
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(ResourceService.class);
+  private static final Logger LOGGER = LogManager.getLogger(ResourceService.class);
   public static final String CREATE_RESOURCE_METADATA_OUT = "createResourceMetadata-out-0";
   private final ResourceRepository repository;
   private final StorageService storageService;
@@ -98,7 +100,7 @@ public class ResourceService {
             prepareResource(s3Key, storageService.prepareFileUrl(s3Key, storageMetadata)));
         resourceId = resource.getId();
         createResourceMetadataPublisher.sendCreateResourceMetadataEvent(CREATE_RESOURCE_METADATA_OUT,
-            MessageBuilder.withPayload(resourceId).build());
+            prepareMessage(resourceId));
         return resource;
       } catch (DatabaseException e) {
         try {
@@ -117,6 +119,22 @@ public class ResourceService {
       }
     }
     return null;
+  }
+
+  private Message<Integer> prepareMessage(Integer resourceId) {
+    // Get traceId from MDC (ThreadContext)
+    String traceId = ThreadContext.get("traceId");
+    if (traceId == null) {
+      traceId = UUID.randomUUID().toString();
+      ThreadContext.put("traceId", traceId);
+    }
+    LOGGER.info("Preparing message for resource ID={}", resourceId);
+
+    // Build a new message with the traceId header
+    return MessageBuilder
+        .withPayload(resourceId)
+        .setHeader("X-Trace-Id", traceId)
+        .build();
   }
 
   @Retryable(

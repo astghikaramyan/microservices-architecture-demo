@@ -5,8 +5,9 @@ import java.util.List;
 import java.util.function.Supplier;
 
 import org.apache.hc.core5.function.Decorator;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.ThreadContext;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
@@ -28,7 +29,7 @@ import io.github.resilience4j.spring6.fallback.FallbackDecorators;
 @Component
 public class StorageMetadataServiceClient {
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(StorageMetadataServiceClient.class);
+  private static final Logger LOGGER = LogManager.getLogger(StorageMetadataServiceClient.class);
   @Value("${s3.permanent-bucket-name}")
   private String permanentBucketName;
   @Value("${s3.staging-bucket-name}")
@@ -130,6 +131,8 @@ public class StorageMetadataServiceClient {
 
   private HttpHeaders prepareHeaders() {
     HttpHeaders headers = new HttpHeaders();
+    String traceId = ThreadContext.get("traceId");
+    headers.add("X-Trace-Id", traceId);
     headers.set("Content-Type", "application/json");
     return headers;
   }

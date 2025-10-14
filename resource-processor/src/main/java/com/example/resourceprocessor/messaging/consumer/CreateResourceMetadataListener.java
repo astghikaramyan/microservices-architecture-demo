@@ -5,15 +5,14 @@ import com.example.resourceprocessor.client.SongServiceClient;
 import com.example.resourceprocessor.exception.InvalidDataException;
 import com.example.resourceprocessor.messaging.publisher.ProcessSongMetadataPublisher;
 import com.example.resourceprocessor.model.SongMetadata;
-import lombok.AllArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.ThreadContext;
 import org.apache.tika.exception.TikaException;
 import org.apache.tika.metadata.Metadata;
 import org.apache.tika.parser.ParseContext;
 import org.apache.tika.parser.mp3.Mp3Parser;
 import org.apache.tika.sax.BodyContentHandler;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.Message;
@@ -25,11 +24,12 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.function.Consumer;
 
 @Configuration
 public class CreateResourceMetadataListener {
-    private static final Logger LOGGER = LoggerFactory.getLogger(CreateResourceMetadataListener.class);
+    private static final Logger LOGGER = LogManager.getLogger(CreateResourceMetadataListener.class);
     public static final String PROCESS_SONG_METADATA_OUT = "processSongMetadata-out-0";
     private final ResourceServiceClient resourceClient;
     private final SongServiceClient songClient;
@@ -45,6 +45,17 @@ public class CreateResourceMetadataListener {
     public Consumer<Message<String>> createResourceMetadata() {
         return message -> {
             try {
+                // Extract traceId from headers
+                String traceId = null;
+                if (message.getHeaders().containsKey("X-Trace-Id")) {
+                    traceId = message.getHeaders().get("X-Trace-Id").toString();
+                }
+                if (traceId == null || traceId.isEmpty()) {
+                    traceId = UUID.randomUUID().toString();
+                }
+                // Put traceId in MDC (ThreadContext) for logging
+                ThreadContext.put("traceId", traceId);
+
                 String resourceId = message.getPayload();
                 byte[] resourceData = resourceClient.getResourceBinary(resourceId);
                 SongMetadata metadata = retrieveFileMetadata(resourceData);
@@ -52,9 +63,11 @@ public class CreateResourceMetadataListener {
                 songClient.saveResourceMetadata(metadata);
                 processSongMetadataPublisher.sendProcessedSongMetadataEvent(PROCESS_SONG_METADATA_OUT,
                     MessageBuilder.withPayload(resourceId).build());
-                LOGGER.info("Processed resource ID: {}", resourceId);
+                LOGGER.info("Received message with resource ID={}", resourceId);
             } catch (Exception e) {
                 throw new RuntimeException(e); // triggers retry & DLQ
+            } finally {
+                ThreadContext.clearAll();
             }
         };
     }

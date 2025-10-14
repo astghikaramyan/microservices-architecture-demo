@@ -7,8 +7,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
@@ -23,7 +23,7 @@ import io.github.resilience4j.retry.Retry;
 @Service
 public class StorageMetadataService {
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(StorageMetadataService.class);
+  private static final Logger LOGGER = LogManager.getLogger(StorageMetadataService.class);
   private static final String BAD_REQUEST_CSV_TOO_LONG_ERROR_MESSAGE = "CSV string is too long: received %s characters, maximum allowed is 200";
   private static final String BAD_REQUEST_INCORRECT_NUMBER_ERROR_MESSAGE = "Invalid value \'%s\' for ID. Must be a positive integer";
   public static final String BAD_REQUEST_NOT_NUMBER_ERROR_MESSAGE = "Invalid ID format: \'%s\' for ID. Only positive integers are allowed";

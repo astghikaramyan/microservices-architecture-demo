@@ -6,7 +6,9 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.FieldError;
@@ -21,85 +23,64 @@ import com.example.storageservice.exception.InvalidDataException;
 import com.example.storageservice.exception.NotFoundException;
 import com.example.storageservice.model.error.ErrorResponse;
 
-@RestControllerAdvice
+@RestControllerAdvice(basePackages = "com.example.storageservice.controller")
 public class GlobalExceptionHandler {
 
   @ExceptionHandler({InvalidDataException.class})
   private ResponseEntity<Object> handleInvalidDataException(final InvalidDataException invalidDataException) {
-    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
-        Objects.nonNull(invalidDataException.getErrorResponse()) ? invalidDataException.getErrorResponse()
-            : invalidDataException.getSimpleErrorResponse());
-  }
-
-  // Handle @Valid / JSR-303 validation errors
-  @ExceptionHandler(MethodArgumentNotValidException.class)
-  public ResponseEntity<Map<String, Object>> handleValidationErrors(MethodArgumentNotValidException ex) {
-    Map<String, Object> errors = new HashMap<>();
-    errors.put("status", HttpStatus.BAD_REQUEST.value());
-    errors.put("error", "Validation failed");
-
-    Map<String, String> fieldErrors = new HashMap<>();
-    for (FieldError fieldError : ex.getBindingResult().getFieldErrors()) {
-      fieldErrors.put(fieldError.getField(), fieldError.getDefaultMessage());
-    }
-    errors.put("fieldErrors", fieldErrors);
-
-    return ResponseEntity.badRequest().body(errors);
-  }
-
-  // Handle invalid JSON / type mismatches (Jackson errors)
-  @ExceptionHandler(HttpMessageNotReadableException.class)
-  public ResponseEntity<Map<String, Object>> handleJsonParseError(HttpMessageNotReadableException ex) {
-    Map<String, Object> error = new HashMap<>();
-    error.put("status", HttpStatus.BAD_REQUEST.value());
-    error.put("error", "Malformed JSON request");
-    error.put("message", ex.getMostSpecificCause().getMessage()); // shows Jackson cause
-    return ResponseEntity.badRequest().body(error);
+    HttpHeaders headers = new HttpHeaders();
+    headers.setContentType(MediaType.APPLICATION_JSON);
+    return new ResponseEntity<>(Objects.nonNull(invalidDataException.getErrorResponse()) ? invalidDataException.getErrorResponse() : invalidDataException.getSimpleErrorResponse(), headers, HttpStatus.BAD_REQUEST);
   }
 
   @ExceptionHandler({DatabaseException.class})
   private ResponseEntity<Object> handleDatabaseException(final DatabaseException databaseException) {
-    return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
-        Objects.nonNull(databaseException.getErrorResponse()) ? databaseException.getErrorResponse()
-            : databaseException.getSimpleErrorResponse());
+    HttpHeaders headers = new HttpHeaders();
+    headers.setContentType(MediaType.APPLICATION_JSON);
+    return new ResponseEntity<>(Objects.nonNull(databaseException.getErrorResponse()) ? databaseException.getErrorResponse() : databaseException.getSimpleErrorResponse(), headers, HttpStatus.INTERNAL_SERVER_ERROR);
   }
 
   @ExceptionHandler({NumberFormatException.class})
   private ResponseEntity<Object> handleNumberFormatException(final NumberFormatException numberFormatException) {
-    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(numberFormatException.getMessage());
+    HttpHeaders headers = new HttpHeaders();
+    headers.setContentType(MediaType.APPLICATION_JSON);
+    return new ResponseEntity<>(numberFormatException.getMessage(), headers, HttpStatus.BAD_REQUEST);
   }
 
   @ExceptionHandler({NotFoundException.class})
   private ResponseEntity<Object> handleNotFoundException(final NotFoundException notFoundException) {
-    return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
-        Objects.nonNull(notFoundException.getErrorResponse()) ? notFoundException.getErrorResponse()
-            : notFoundException.getSimpleErrorResponse());
+    HttpHeaders headers = new HttpHeaders();
+    headers.setContentType(MediaType.APPLICATION_JSON);
+    return new ResponseEntity<>(Objects.nonNull(notFoundException.getErrorResponse()) ? notFoundException.getErrorResponse() : notFoundException.getSimpleErrorResponse(), headers, HttpStatus.NOT_FOUND);
   }
 
   @ExceptionHandler({HttpMediaTypeNotSupportedException.class})
-  private ResponseEntity<ErrorResponse> handleHttpMediaTypeNotSupportedException(
-      final HttpMediaTypeNotSupportedException ex) {
+  private ResponseEntity<ErrorResponse> handleHttpMediaTypeNotSupportedException(final HttpMediaTypeNotSupportedException ex) {
+    HttpHeaders headers = new HttpHeaders();
+    headers.setContentType(MediaType.APPLICATION_JSON);
     ErrorResponse errorResponse = new ErrorResponse();
     errorResponse.setErrorMessage("Invalid file format: " + ex.getContentType() + ". Only MP3 files are allowed");
     errorResponse.setErrorCode("400");
-    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+    return new ResponseEntity<>(errorResponse, headers, HttpStatus.BAD_REQUEST);
   }
 
   @ExceptionHandler({MethodArgumentTypeMismatchException.class})
-  private ResponseEntity<Object> handleAssertionError(
-      final MethodArgumentTypeMismatchException methodArgumentTypeMismatchException) {
+  private ResponseEntity<Object> handleAssertionError(final MethodArgumentTypeMismatchException methodArgumentTypeMismatchException) {
+    HttpHeaders headers = new HttpHeaders();
+    headers.setContentType(MediaType.APPLICATION_JSON);
     ErrorResponse errorResponse = new ErrorResponse();
-    errorResponse.setErrorMessage(
-        String.format(BAD_REQUEST_NOT_NUMBER_ERROR_MESSAGE, methodArgumentTypeMismatchException.getValue()));
+    errorResponse.setErrorMessage(String.format(BAD_REQUEST_NOT_NUMBER_ERROR_MESSAGE, methodArgumentTypeMismatchException.getValue()));
     errorResponse.setErrorCode("400");
-    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+    return new ResponseEntity<>(errorResponse, headers, HttpStatus.BAD_REQUEST);
   }
 
   @ExceptionHandler({Exception.class})
   private ResponseEntity<ErrorResponse> handleException(final Exception ex) {
+    HttpHeaders headers = new HttpHeaders();
+    headers.setContentType(MediaType.APPLICATION_JSON);
     ErrorResponse errorResponse = new ErrorResponse();
     errorResponse.setErrorMessage(ex.getMessage());
     errorResponse.setErrorCode("500");
-    return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+    return new ResponseEntity<>(errorResponse, headers, HttpStatus.INTERNAL_SERVER_ERROR);
   }
 }
