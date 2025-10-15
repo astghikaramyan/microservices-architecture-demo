@@ -34,9 +34,9 @@ class ResourceRestControllerTest {
         ResourceEntity entity = new ResourceEntity();
         entity.setId(42);
 
-        when(resourceService.uploadResource(audioData)).thenReturn(entity);
+        when(resourceService.uploadResource(audioData, null)).thenReturn(entity);
 
-        ResponseEntity<Map<String, Integer>> response = controller.uploadResource(audioData);
+        ResponseEntity<Map<String, Integer>> response = controller.uploadResource(audioData, "test");
 
         assertEquals(200, response.getStatusCodeValue());
         assertEquals(42, response.getBody().get("id"));
@@ -47,9 +47,9 @@ class ResourceRestControllerTest {
         byte[] audioData = new byte[]{1, 2, 3};
         ErrorResponse errorResponse = new ErrorResponse();
         errorResponse.setErrorMessage("error");
-        when(resourceService.uploadResource(audioData)).thenThrow(DatabaseException.class);
+        when(resourceService.uploadResource(audioData, null)).thenThrow(DatabaseException.class);
 
-        assertThrows(DatabaseException.class, () -> controller.uploadResource(audioData));
+        assertThrows(DatabaseException.class, () -> controller.uploadResource(audioData, "test"));
     }
 
     @Test
@@ -57,8 +57,8 @@ class ResourceRestControllerTest {
         byte[] audioData = new byte[]{1, 2, 3};
         ErrorResponse errorResponse = new ErrorResponse();
         errorResponse.setErrorMessage("error");
-        when(resourceService.uploadResource(audioData)).thenReturn(null);
-        assertThrows(InvalidDataException.class, () -> controller.uploadResource(audioData));
+        when(resourceService.uploadResource(audioData, null)).thenReturn(null);
+        assertThrows(InvalidDataException.class, () -> controller.uploadResource(audioData, "test"));
     }
 
     @Test

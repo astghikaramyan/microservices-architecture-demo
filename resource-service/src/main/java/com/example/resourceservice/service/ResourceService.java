@@ -43,6 +43,7 @@ import com.example.resourceservice.exception.SongClientException;
 import com.example.resourceservice.exception.StorageException;
 import com.example.resourceservice.exception.StreamBridgeException;
 import com.example.resourceservice.messaging.producer.CreateResourceMetadataPublisher;
+import com.example.resourceservice.model.requestMetadata.RequestMetadata;
 import com.example.resourceservice.model.storagemetadata.StorageMetadataResponse;
 import com.example.resourceservice.model.storagemetadata.StorageType;
 import com.example.resourceservice.repository.ResourceRepository;
@@ -84,9 +85,9 @@ public class ResourceService {
     this.stagingBucketName = stagingBucketName;
   }
 
-  public ResourceEntity uploadResource(byte[] fileBytes) {
+  public ResourceEntity uploadResource(byte[] fileBytes, RequestMetadata requestMetadata) {
     String s3Key = "resources/" + UUID.randomUUID() + ".mp3";
-    StorageMetadataResponse storageMetadata = retrieveStorageMetadata(StorageType.STAGING);
+    StorageMetadataResponse storageMetadata = retrieveStorageMetadata(StorageType.STAGING, requestMetadata);
     if (Objects.nonNull(storageMetadata)) {
       try {
         storageService.addFileBytesToStorage(s3Key, fileBytes, storageMetadata.getBucket());
@@ -100,7 +101,7 @@ public class ResourceService {
             prepareResource(s3Key, storageService.prepareFileUrl(s3Key, storageMetadata)));
         resourceId = resource.getId();
         createResourceMetadataPublisher.sendCreateResourceMetadataEvent(CREATE_RESOURCE_METADATA_OUT,
-            prepareMessage(resourceId));
+            prepareMessage(resourceId, requestMetadata));
         return resource;
       } catch (DatabaseException e) {
         try {
@@ -121,9 +122,9 @@ public class ResourceService {
     return null;
   }
 
-  private Message<Integer> prepareMessage(Integer resourceId) {
+  private Message<Integer> prepareMessage(Integer resourceId, RequestMetadata requestMetadata) {
     // Get traceId from MDC (ThreadContext)
-    String traceId = ThreadContext.get("traceId");
+    String traceId = (Objects.nonNull(requestMetadata) && Objects.nonNull(requestMetadata.getTraceId())) ? requestMetadata.getTraceId() : ThreadContext.get("traceId");
     if (traceId == null) {
       traceId = UUID.randomUUID().toString();
       ThreadContext.put("traceId", traceId);
@@ -176,7 +177,7 @@ public class ResourceService {
     }
     try {
       StorageMetadataResponse storageMetadata = retrieveStorageMetadata(
-          resourceOpt.get().getFileName().contains(stagingBucketName) ? StorageType.STAGING : StorageType.PERMANENT);
+          resourceOpt.get().getFileName().contains(stagingBucketName) ? StorageType.STAGING : StorageType.PERMANENT, null);
       if (Objects.nonNull(storageMetadata)) {
         ResponseBytes<GetObjectResponse> objectBytes = storageService.retrieveFileFromStorage(
             resourceOpt.get().getS3Key(), storageMetadata.getBucket());
@@ -210,7 +211,7 @@ public class ResourceService {
         byte[] fileBytes = getFileAsBytes(resourceId);
         String bucketName = permanentBucketName;
         StorageMetadataResponse storageMetadata = retrieveStorageMetadata(
-            resource.getFileName().contains(stagingBucketName) ? StorageType.STAGING : StorageType.PERMANENT);
+            resource.getFileName().contains(stagingBucketName) ? StorageType.STAGING : StorageType.PERMANENT, null);
         if (Objects.nonNull(storageMetadata)) {
           bucketName = storageMetadata.getBucket();
         }
@@ -342,8 +343,8 @@ public class ResourceService {
     return resource;
   }
 
-  private StorageMetadataResponse retrieveStorageMetadata(StorageType storageType) {
-    return storageMetadataServiceClient.getStoragesWithStorageServiceCB().stream()
+  private StorageMetadataResponse retrieveStorageMetadata(StorageType storageType, RequestMetadata requestMetadata) {
+    return storageMetadataServiceClient.getStoragesWithStorageServiceCB(requestMetadata).stream()
         .filter(storageMetadataResponse -> storageMetadataResponse.getStorageType() == storageType)
         .findFirst()
         .orElse(null);

@@ -2,12 +2,12 @@ package com.example.resourceservice.client;
 
 import java.net.URI;
 import java.util.List;
+import java.util.Objects;
 import java.util.function.Supplier;
-
-import org.apache.hc.core5.function.Decorator;
-import org.apache.logging.log4j.ThreadContext;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.ThreadContext;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
@@ -18,13 +18,13 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
+import com.example.resourceservice.model.requestMetadata.RequestMetadata;
 import com.example.resourceservice.model.storagemetadata.StorageMetadataResponse;
 import com.example.resourceservice.model.storagemetadata.StorageType;
 
 import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.github.resilience4j.retry.Retry;
-import io.github.resilience4j.spring6.fallback.FallbackDecorators;
 
 @Component
 public class StorageMetadataServiceClient {
@@ -40,22 +40,21 @@ public class StorageMetadataServiceClient {
   private String stagingFilesPath;
   @Value("${storage-metadata.service.url}")
   private String storageMetadataServiceUrl;
-  private final RestTemplate restTemplate;
+  private final RestTemplate storageRestTemplate;
   private final CircuitBreaker storageServiceCB;
   private final Retry storageServiceRetry;
-
-  public StorageMetadataServiceClient(RestTemplate restTemplate, CircuitBreaker storageServiceCB,
+  public StorageMetadataServiceClient(@Qualifier("storageRestTemplate") RestTemplate storageRestTemplate, CircuitBreaker storageServiceCB,
       Retry storageServiceRetry) {
-    this.restTemplate = restTemplate;
+    this.storageRestTemplate = storageRestTemplate;
     this.storageServiceCB = storageServiceCB;
     this.storageServiceRetry = storageServiceRetry;
   }
 
-  public List<StorageMetadataResponse> getStoragesWithStorageServiceCB() {
+  public List<StorageMetadataResponse> getStoragesWithStorageServiceCB(RequestMetadata requestMetadata) {
     try {
       return storageServiceCB.executeSupplier(() -> {
         // Prepare headers and URI
-        HttpEntity<?> httpEntity = new HttpEntity<>(prepareHeaders());
+        HttpEntity<?> httpEntity = new HttpEntity<>(prepareHeaders(requestMetadata));
         URI uri = prepareURI();
         if (uri == null) {
           LOGGER.error("Storage Metadata Service URL is not configured");
@@ -63,10 +62,11 @@ public class StorageMetadataServiceClient {
         }
         LOGGER.debug("Calling Storage Service, URI {}", uri);
         // Call with circuit breaker using executeSupplier
-        ResponseEntity<List<StorageMetadataResponse>> responseEntity = restTemplate.exchange(
+        ResponseEntity<List<StorageMetadataResponse>> responseEntity = storageRestTemplate.exchange(
             uri, HttpMethod.GET, httpEntity, new ParameterizedTypeReference<>() {
             }
         );
+        LOGGER.info("Received response from Storage Service for protected resource.");
         return responseEntity != null && responseEntity.getBody() != null
             ? responseEntity.getBody()
             : getStoragesFallback();
@@ -82,7 +82,7 @@ public class StorageMetadataServiceClient {
   }
 
   public List<StorageMetadataResponse> getStoragesWithCBAndRetry() {
-    HttpEntity<?> httpEntity = new HttpEntity<>(prepareHeaders());
+    HttpEntity<?> httpEntity = new HttpEntity<>(prepareHeaders(null));
     URI uri = prepareURI();
     if (uri == null) {
       LOGGER.error("Storage Metadata Service URL is not configured");
@@ -92,7 +92,7 @@ public class StorageMetadataServiceClient {
     LOGGER.debug("Calling Storage Service, URI {}", uri);
 
     Supplier<List<StorageMetadataResponse>> supplier = () -> {
-      ResponseEntity<List<StorageMetadataResponse>> responseEntity = restTemplate.exchange(
+      ResponseEntity<List<StorageMetadataResponse>> responseEntity = storageRestTemplate.exchange(
           uri, HttpMethod.GET, httpEntity, new ParameterizedTypeReference<>() {}
       );
       return responseEntity != null && responseEntity.getBody() != null
@@ -129,11 +129,11 @@ public class StorageMetadataServiceClient {
         .toUri();
   }
 
-  private HttpHeaders prepareHeaders() {
+  private HttpHeaders prepareHeaders(RequestMetadata requestMetadata) {
     HttpHeaders headers = new HttpHeaders();
     String traceId = ThreadContext.get("traceId");
-    headers.add("X-Trace-Id", traceId);
-    headers.set("Content-Type", "application/json");
+    headers.add("X-Trace-Id", (Objects.nonNull(requestMetadata) && Objects.nonNull(requestMetadata.getTraceId())) ? requestMetadata.getTraceId() : traceId);
+    headers.add("Content-Type", "application/json");
     return headers;
   }
 

@@ -66,7 +66,7 @@ public class ProcessSongMetadataListener {
   }
 
   private List<StorageMetadataResponse> retrieveStoragesMetadata() {
-    return storageMetadataServiceClient.getStoragesWithStorageServiceCB();
+    return storageMetadataServiceClient.getStoragesWithStorageServiceCB(null);
   }
 
   private StorageMetadataResponse filterStoragesMetadataByType(List<StorageMetadataResponse> storageMetadataResponses,

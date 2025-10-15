@@ -28,6 +28,12 @@ spring:
   application:
     name: storage-metadata-service
 
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://host.docker.internal:9000
+
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5435/STORAGE_METADATA_DB}
     username: ${POSTGRES_USER:myuser}
