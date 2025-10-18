@@ -27,6 +27,19 @@ spring:
   application:
     name: resource-service
 
+  security:
+    oauth2:
+      client:
+        registration:
+          storage-service:
+            client-id: storage-client
+            client-secret: secret
+            authorization-grant-type: client_credentials
+            scope: storage.read,storage.write
+        provider:
+          storage-service:
+            token-uri: http://host.docker.internal:9000/oauth2/token
+
   rabbitmq:
     host: ${SPRING_RABBITMQ_HOST:localhost}
     port: ${SPRING_RABBITMQ_PORT:5672}

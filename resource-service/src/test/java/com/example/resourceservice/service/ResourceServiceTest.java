@@ -46,7 +46,7 @@ class ResourceServiceTest {
         ResourceEntity entity = new ResourceEntity();
         entity.setId(1);
         org.mockito.Mockito.when(repository.save(org.mockito.Mockito.any())).thenReturn(entity);
-        ResourceEntity result = resourceService.uploadResource(fileBytes);
+        ResourceEntity result = resourceService.uploadResource(fileBytes, null);
         assertNotNull(result);
         assertEquals(1, result.getId());
     }
@@ -58,7 +58,7 @@ class ResourceServiceTest {
         errorResponse.setErrorMessage("error");
         org.mockito.Mockito.doThrow(new RuntimeException()).when(storageService).addFileBytesToStorage(org.mockito.Mockito.anyString(), org.mockito.Mockito.any(), org.mockito.Mockito.anyString());
         org.mockito.Mockito.when(dataPreparerService.prepareErrorResponse(org.mockito.Mockito.anyString(), org.mockito.Mockito.anyString())).thenReturn(errorResponse);
-        assertThrows(StorageException.class, () -> resourceService.uploadResource(fileBytes));
+        assertThrows(StorageException.class, () -> resourceService.uploadResource(fileBytes, null));
     }
 
     @Test

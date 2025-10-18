@@ -4,7 +4,7 @@
 		"name": "Introduction to Microservices",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
 		"_exporter_id": "7844875",
-		"_collection_link": "https://blue-firefly-4764.postman.co/workspace/Microservices-demo~aad95a3c-5ec0-4d85-97c5-33ef6be200d5/collection/7844875-00bc455a-bfbd-43f3-8ecc-cc555a94cf01?action=share&source=collection_link&creator=7844875"
+		"_collection_link": "https://blue-firefly-4764.postman.co/workspace/aad95a3c-5ec0-4d85-97c5-33ef6be200d5/collection/7844875-00bc455a-bfbd-43f3-8ecc-cc555a94cf01?action=share&source=collection_link&creator=7844875"
 	},
 	"item": [
 		{
@@ -39,7 +39,8 @@
 									"});"
 								],
 								"type": "text/javascript",
-								"packages": {}
+								"packages": {},
+								"requests": {}
 							}
 						}
 					],
@@ -54,7 +55,7 @@
 						"body": {
 							"mode": "file",
 							"file": {
-								"src": ""
+								"src": "/C:/Users/AstghikAramyan/Downloads/sample-3s.mp3"
 							}
 						},
 						"url": {
@@ -109,7 +110,8 @@
 									""
 								],
 								"type": "text/javascript",
-								"packages": {}
+								"packages": {},
+								"requests": {}
 							}
 						}
 					],
@@ -201,7 +203,8 @@
 									""
 								],
 								"type": "text/javascript",
-								"packages": {}
+								"packages": {},
+								"requests": {}
 							}
 						}
 					],
@@ -1769,6 +1772,70 @@
 					"response": []
 				},
 				{
+					"name": "test",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Request URL matches expected structure\", function () {\r",
+									"    var requestUrl = pm.request.url.toString();\r",
+									"    var songServiceUrl = pm.variables.get(\"song_service_url\");\r",
+									"    var dynamicId = pm.variables.get(\"id\");\r",
+									"    var expectedUrl = songServiceUrl + \"/songs/\" + dynamicId;\r",
+									"    pm.expect(requestUrl, \"Expected request URL to match the expected structure\").to.equal(expectedUrl);\r",
+									"});\r",
+									"\r",
+									"pm.test(\"Path variable 'id' is dynamic\", function () {\r",
+									"    var requestUrl = pm.request.url.toString();\r",
+									"    var dynamicId = pm.variables.get(\"id\");\r",
+									"    var expectedUrl = pm.variables.get(\"song_service_url\") + \"/songs/\" + dynamicId;\r",
+									"    pm.expect(requestUrl, \"Expected request URL to include dynamic 'id'\").to.equal(expectedUrl);\r",
+									"});\r",
+									"\r",
+									"pm.test(\"Status code is 404\", function () {\r",
+									"    pm.expect(pm.response.code, \"Expected status code to be 404\").to.equal(404);\r",
+									"});\r",
+									"\r",
+									"pm.test(\"Response is in JSON format\", function () {\r",
+									"    pm.expect(pm.response.headers.get(\"Content-Type\"), \"Expected Content-Type to be 'application/json'\")\r",
+									"      .to.equal(\"application/json\");\r",
+									"});\r",
+									"\r",
+									"pm.test(\"Response contains '404'\", function () {\r",
+									"    var responseBody = pm.response.text();\r",
+									"    pm.expect(responseBody, \"Expected response to contain '404'\").to.include(\"404\");\r",
+									"});\r",
+									""
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"type\": \"index-pattern\",\r\n    \"id\": \"logs-pattern\",\r\n    \"attributes\": {\r\n        \"title\": \"logs-*\",\r\n        \"timeFieldName\": \"timestamp\",\r\n        \"fields\": \"[{\\\"name\\\":\\\"timestamp\\\",\\\"type\\\":\\\"date\\\"},{\\\"name\\\":\\\"service_name\\\",\\\"type\\\":\\\"keyword\\\"},{\\\"name\\\":\\\"thread\\\",\\\"type\\\":\\\"keyword\\\"},{\\\"name\\\":\\\"level\\\",\\\"type\\\":\\\"keyword\\\"},{\\\"name\\\":\\\"logger\\\",\\\"type\\\":\\\"keyword\\\"},{\\\"name\\\":\\\"message\\\",\\\"type\\\":\\\"text\\\"},{\\\"name\\\":\\\"traceId\\\",\\\"type\\\":\\\"keyword\\\"}]\",\r\n        \"name\": \"Logs Data View\"\r\n    }\r\n}\r\n{\r\n    \"type\": \"search\",\r\n    \"id\": \"logs-all\",\r\n    \"attributes\": {\r\n        \"title\": \"All Logs\",\r\n        \"description\": \"All microservice logs from ELK\",\r\n        \"hits\": 0,\r\n        \"columns\": [\r\n            \"timestamp\",\r\n            \"service_name\",\r\n            \"thread\",\r\n            \"level\",\r\n            \"logger\",\r\n            \"message\",\r\n            \"traceId\"\r\n        ],\r\n        \"sort\": [\r\n            [\r\n                \"timestamp\",\r\n                \"desc\"\r\n            ]\r\n        ],\r\n        \"kibanaSavedObjectMeta\": {\r\n            \"searchSourceJSON\": \"{\\\"index\\\":\\\"logs-pattern\\\",\\\"query\\\":{\\\"language\\\":\\\"kuery\\\",\\\"query\\\":\\\"*\\\"},\\\"filter\\\":[]}\"\r\n        }\r\n    }\r\n}\r\n{\r\n    \"type\": \"search\",\r\n    \"id\": \"logs-all\",\r\n    \"attributes\": {\r\n        \"title\": \"All Logs\",\r\n        \"description\": \"All microservice logs from ELK\",\r\n        \"hits\": 0,\r\n        \"columns\": [\r\n            \"timestamp\",\r\n            \"service_name\",\r\n            \"thread\",\r\n            \"level\",\r\n            \"logger\",\r\n            \"message\",\r\n            \"traceId\"\r\n        ],\r\n        \"sort\": [\r\n            [\r\n                \"timestamp\",\r\n                \"desc\"\r\n            ]\r\n        ],\r\n        \"kibanaSavedObjectMeta\": {\r\n            \"searchSourceJSON\": \"{\\\"index\\\":\\\"logs-pattern\\\",\\\"query\\\":{\\\"query\\\":\\\"*\\\",\\\"language\\\":\\\"kuery\\\"},\\\"filter\\\":[]}\"\r\n        }\r\n    }\r\n}\r\n{\r\n    \"type\": \"search\",\r\n    \"id\": \"logs-all\",\r\n    \"attributes\": {\r\n        \"title\": \"All Logs\",\r\n        \"description\": \"All microservice logs from ELK\",\r\n        \"hits\": 0,\r\n        \"columns\": [\r\n            \"timestamp\",\r\n            \"service_name\",\r\n            \"thread\",\r\n            \"level\",\r\n            \"logger\",\r\n            \"message\",\r\n            \"traceId\"\r\n        ],\r\n        \"sort\": [\r\n            [\r\n                \"timestamp\",\r\n                \"desc\"\r\n            ]\r\n        ],\r\n        \"kibanaSavedObjectMeta\": {\r\n            \"searchSourceJSON\": \"{\\\"indexRefName\\\":\\\"kibanaSavedObjectMeta.searchSourceJSON.index\\\",\\\"query\\\":{\\\"query\\\":\\\"*\\\",\\\"language\\\":\\\"kuery\\\"},\\\"filter\\\":[]}\"\r\n        }\r\n    }\r\n}\r\n\r\n{\r\n    \"type\": \"dashboard\",\r\n    \"id\": \"logs-dashboard\",\r\n    \"attributes\": {\r\n        \"title\": \"Microservices Logs\",\r\n        \"panelsJSON\": \"[{\\\"panelIndex\\\":\\\"1\\\",\\\"type\\\":\\\"search\\\",\\\"id\\\":\\\"logs-all\\\",\\\"gridData\\\":{\\\"x\\\":0,\\\"y\\\":0,\\\"w\\\":24,\\\"h\\\":12,\\\"i\\\":\\\"1\\\"},\\\"version\\\":\\\"7.17.0\\\"}]\",\r\n        \"optionsJSON\": \"{\\\"hidePanelTitles\\\":false}\"\r\n    }\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": ""
+						}
+					},
+					"response": []
+				},
+				{
 					"name": "refresh central config",
 					"event": [
 						{
@@ -1946,6 +2013,11 @@
 							{
 								"key": "Content-Type",
 								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJzdWIiOiJhZG1pbiIsInJvbGVzIjpbIlJPTEVfQURNSU4iXSwiaWF0IjoxNzYwMzYxODQzLCJleHAiOjE3NjAzNjU0NDN9.LjJbaGn5vOO5JLD6VeWtAkvhV9CjX-tI1YXwmkgvhzikljd1M4LXwrHO_j2HzIdCrt9fc4gfphA5VcZATCCQnvPXTtys18acayP01eS75h9EIBvLsYPpxqgNWTNThenbjJ8W9j_hweExLdO-2odoN4K7k2eLhvsgsJdssPvHS5z-4R4ZQ6UFbZh6uYV6c_gXimm32AEViLcLyy8Z1kf22OveUPc7dGB81NNoBgTXzWZonWgk_MiJI17u_v53gdbx8v1nG6kemlDLFTZa1AM9qVivphhSVNq_31ndkKqtVA7hSyzn0kvzBJVtH102xEe0mWzHtelOni4oNtx6mSZWPQ",
+								"type": "text"
 							}
 						],
 						"body": {
@@ -2025,6 +2097,11 @@
 								"key": "Content-Type",
 								"value": "application/json",
 								"disabled": true
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1c2VyIiwicm9sZXMiOlsiUk9MRV9VU0VSIl0sImlhdCI6MTc2MDUyNDQwNSwiZXhwIjoxNzYwNTI4MDA1fQ.QD13tQl1O9dgAGcDpE4khWDL_TyrMikdozi2__3XEds",
+								"type": "text"
 							}
 						],
 						"url": {
@@ -2061,10 +2138,15 @@
 								"key": "Content-Type",
 								"value": "application/json",
 								"disabled": true
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1c2VyIiwicm9sZXMiOlsiUk9MRV9VU0VSIl0sImlhdCI6MTc2MDUyNDQwNSwiZXhwIjoxNzYwNTI4MDA1fQ.QD13tQl1O9dgAGcDpE4khWDL_TyrMikdozi2__3XEds",
+								"type": "text"
 							}
 						],
 						"url": {
-							"raw": "{{storage_metadata_service_url}}/storages?ids=1",
+							"raw": "{{storage_metadata_service_url}}/storages?ids=3",
 							"host": [
 								"{{storage_metadata_service_url}}"
 							],
@@ -2074,7 +2156,7 @@
 							"query": [
 								{
 									"key": "ids",
-									"value": "1"
+									"value": "3"
 								}
 							]
 						}
@@ -2166,6 +2248,307 @@
 					"response": []
 				}
 			]
+		},
+		{
+			"name": "authserver",
+			"item": [
+				{
+					"name": ".well-known/jwks.json",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"auth": {
+							"type": "basic",
+							"basic": [
+								{
+									"key": "password",
+									"value": "secret",
+									"type": "string"
+								},
+								{
+									"key": "username",
+									"value": "storage-client",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/x-www-form-urlencoded"
+							}
+						],
+						"body": {
+							"mode": "urlencoded",
+							"urlencoded": [
+								{
+									"key": "grant_type",
+									"value": "password",
+									"type": "text"
+								},
+								{
+									"key": "username",
+									"value": "admin",
+									"type": "text"
+								},
+								{
+									"key": "password",
+									"value": "admin",
+									"type": "text"
+								},
+								{
+									"key": "scope",
+									"value": "storage.read storage.write",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "http://localhost:9000/.well-known/jwks.json",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "9000",
+							"path": [
+								".well-known",
+								"jwks.json"
+							]
+						},
+						"description": "Generated from cURL: curl -X POST \"http://localhost:9000/oauth/token\" \\\r\n  -H \"Content-Type: application/x-www-form-urlencoded\" \\\r\n  -u \"my-client:my-secret\" \\\r\n  -d \"grant_type=password&username=admin&password=adminpass&scope=read\"\r\n"
+					},
+					"response": [
+						{
+							"name": "grant_type=password",
+							"originalRequest": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/x-www-form-urlencoded"
+									}
+								],
+								"body": {
+									"mode": "urlencoded",
+									"urlencoded": [
+										{
+											"key": "grant_type",
+											"value": "password",
+											"type": "text"
+										},
+										{
+											"key": "username",
+											"value": "admin",
+											"type": "text"
+										},
+										{
+											"key": "password",
+											"value": "admin",
+											"type": "text"
+										},
+										{
+											"key": "scope",
+											"value": "storage.read storage.write",
+											"type": "text"
+										}
+									]
+								},
+								"url": {
+									"raw": "http://localhost:9000/.well-known/jwks.json",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "9000",
+									"path": [
+										".well-known",
+										"jwks.json"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": null,
+							"header": [
+								{
+									"key": "X-Content-Type-Options",
+									"value": "nosniff"
+								},
+								{
+									"key": "X-XSS-Protection",
+									"value": "0"
+								},
+								{
+									"key": "Cache-Control",
+									"value": "no-cache, no-store, max-age=0, must-revalidate"
+								},
+								{
+									"key": "Pragma",
+									"value": "no-cache"
+								},
+								{
+									"key": "Expires",
+									"value": "0"
+								},
+								{
+									"key": "X-Frame-Options",
+									"value": "DENY"
+								},
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								},
+								{
+									"key": "Transfer-Encoding",
+									"value": "chunked"
+								},
+								{
+									"key": "Date",
+									"value": "Mon, 13 Oct 2025 13:39:16 GMT"
+								},
+								{
+									"key": "Keep-Alive",
+									"value": "timeout=60"
+								},
+								{
+									"key": "Connection",
+									"value": "keep-alive"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"keys\": [\n        {\n            \"kty\": \"RSA\",\n            \"e\": \"AQAB\",\n            \"kid\": \"56e00142-782c-4501-9e8c-fe80c4afb5c6\",\n            \"n\": \"ukh9bs8IbJeU-dU5T-kadNAwz3Jxsb4HNKem5DfP-XSfIrtEfPuyj8Zp4iMO_Py1IWYnKFm9SUqeg2IUBxwJEghtgzw9VCPz6uECdhW8qMnL5OMzkw-ZzBs0xDb8m6ogDr_yHAC7gdu3WEcwZWHtaUyizuuf5mW470-zFf7VABr0GiMJxH4QVbBYrJZbOW5s2wKhh5ldxZFJTEjy1gZuS1t5MdFcqYIU2fODj_R-SvXQ7eqT6vu2BwX1YtGE-IXxu2Vv-o60IrtVVJX1SjMJmz0LF2GzyB-9TAdw56mCxgbJw6WjHHf4nYpttMDpZ6vK0c_skOwWhkxyPie9O_o0nw\"\n        }\n    ]\n}"
+						}
+					]
+				},
+				{
+					"name": "Retrieve admin token",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\"username\":\"admin\",\"password\":\"admin\"}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:9000/auth/login",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "9000",
+							"path": [
+								"auth",
+								"login"
+							]
+						},
+						"description": "Generated from cURL: curl -X POST http://localhost:9000/auth/login \\\r\n  -H \"Content-Type: application/json\" \\\r\n  -d '{\"username\":\"admin\",\"password\":\"admin\"}'\r\n"
+					},
+					"response": []
+				},
+				{
+					"name": "Retrieve user token",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\"username\":\"user\",\"password\":\"user\"}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:9000/auth/login",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "9000",
+							"path": [
+								"auth",
+								"login"
+							]
+						},
+						"description": "Generated from cURL: curl -X POST http://localhost:9000/auth/login \\\r\n  -H \"Content-Type: application/json\" \\\r\n  -d '{\"username\":\"admin\",\"password\":\"admin\"}'\r\n"
+					},
+					"response": []
+				},
+				{
+					"name": "Client Credentials Flow",
+					"request": {
+						"auth": {
+							"type": "basic",
+							"basic": [
+								{
+									"key": "username",
+									"value": "storage-client",
+									"type": "string"
+								},
+								{
+									"key": "password",
+									"value": "secret",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/x-www-form-urlencoded"
+							}
+						],
+						"body": {
+							"mode": "urlencoded",
+							"urlencoded": [
+								{
+									"key": "grant_type",
+									"value": "client_credentials",
+									"type": "text"
+								},
+								{
+									"key": "scope",
+									"value": "storage.read storage.write",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "http://localhost:9000/oauth2/token",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "9000",
+							"path": [
+								"oauth2",
+								"token"
+							]
+						},
+						"description": "Generated from cURL: curl -X POST \"http://localhost:9000/oauth2/token\" \\\r\n  -H \"Content-Type: application/x-www-form-urlencoded\" \\\r\n  -u \"storage-client:secret\" \\\r\n  -d \"grant_type=client_credentials&scope=storage.read storage.write\""
+					},
+					"response": []
+				}
+			]
 		}
 	],
 	"event": [
@@ -2174,6 +2557,7 @@
 			"script": {
 				"type": "text/javascript",
 				"packages": {},
+				"requests": {},
 				"exec": [
 					""
 				]
@@ -2184,6 +2568,7 @@
 			"script": {
 				"type": "text/javascript",
 				"packages": {},
+				"requests": {},
 				"exec": [
 					""
 				]
@@ -2193,18 +2578,20 @@
 	"variable": [
 		{
 			"key": "id",
-			"value": "1",
-			"type": "string"
+			"value": "1"
 		},
 		{
 			"key": "resource_service_url",
-			"value": "http://localhost:8080",
-			"type": "string"
+			"value": "http://localhost:8080"
 		},
 		{
 			"key": "song_service_url",
-			"value": "http://localhost:8080",
-			"type": "string"
+			"value": "http://localhost:8080"
+		},
+		{
+			"key": "storage_metadata_service_url",
+			"value": "",
+			"type": "default"
 		}
 	]
 }
