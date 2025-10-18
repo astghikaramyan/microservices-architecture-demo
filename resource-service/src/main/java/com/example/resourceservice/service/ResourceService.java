@@ -22,11 +22,8 @@ import java.util.UUID;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.apache.logging.log4j.ThreadContext;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.stream.function.StreamBridge;
-import org.springframework.messaging.Message;
-import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Recover;
 import org.springframework.retry.annotation.Retryable;
@@ -35,6 +32,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.example.resourceservice.client.SongServiceClient;
 import com.example.resourceservice.client.StorageMetadataServiceClient;
+import com.example.resourceservice.entity.OutboxEvent;
 import com.example.resourceservice.entity.ResourceEntity;
 import com.example.resourceservice.exception.DatabaseException;
 import com.example.resourceservice.exception.InvalidDataException;
@@ -46,6 +44,7 @@ import com.example.resourceservice.messaging.producer.CreateResourceMetadataPubl
 import com.example.resourceservice.model.requestMetadata.RequestMetadata;
 import com.example.resourceservice.model.storagemetadata.StorageMetadataResponse;
 import com.example.resourceservice.model.storagemetadata.StorageType;
+import com.example.resourceservice.repository.OutboxEventRepository;
 import com.example.resourceservice.repository.ResourceRepository;
 import com.example.resourceservice.util.DataPreparerService;
 
@@ -65,6 +64,7 @@ public class ResourceService {
   private final CreateResourceMetadataPublisher createResourceMetadataPublisher;
   private final String permanentBucketName;
   private final String stagingBucketName;
+  private final OutboxEventRepository outboxEventRepository;
 
   public ResourceService(ResourceRepository repository,
       StreamBridge streamBridge,
@@ -74,7 +74,8 @@ public class ResourceService {
       StorageMetadataServiceClient storageMetadataServiceClient,
       CreateResourceMetadataPublisher createResourceMetadataPublisher,
       @Value("${s3.permanent-bucket-name}") String permanentBucketName,
-      @Value("${s3.staging-bucket-name}") String stagingBucketName) {
+      @Value("${s3.staging-bucket-name}") String stagingBucketName,
+      OutboxEventRepository outboxEventRepository) {
     this.repository = repository;
     this.storageService = storageService;
     this.dataPreparerService = dataPreparerService;
@@ -83,8 +84,10 @@ public class ResourceService {
     this.createResourceMetadataPublisher = createResourceMetadataPublisher;
     this.permanentBucketName = permanentBucketName;
     this.stagingBucketName = stagingBucketName;
+    this.outboxEventRepository = outboxEventRepository;
   }
 
+  @Transactional
   public ResourceEntity uploadResource(byte[] fileBytes, RequestMetadata requestMetadata) {
     String s3Key = "resources/" + UUID.randomUUID() + ".mp3";
     StorageMetadataResponse storageMetadata = retrieveStorageMetadata(StorageType.STAGING, requestMetadata);
@@ -100,8 +103,7 @@ public class ResourceService {
         ResourceEntity resource = saveResource(
             prepareResource(s3Key, storageService.prepareFileUrl(s3Key, storageMetadata)));
         resourceId = resource.getId();
-        createResourceMetadataPublisher.sendCreateResourceMetadataEvent(CREATE_RESOURCE_METADATA_OUT,
-            prepareMessage(resourceId, requestMetadata));
+        outboxEventRepository.save(prepareOutboxEventEntity(resourceId));
         return resource;
       } catch (DatabaseException e) {
         try {
@@ -120,22 +122,6 @@ public class ResourceService {
       }
     }
     return null;
-  }
-
-  private Message<Integer> prepareMessage(Integer resourceId, RequestMetadata requestMetadata) {
-    // Get traceId from MDC (ThreadContext)
-    String traceId = (Objects.nonNull(requestMetadata) && Objects.nonNull(requestMetadata.getTraceId())) ? requestMetadata.getTraceId() : ThreadContext.get("traceId");
-    if (traceId == null) {
-      traceId = UUID.randomUUID().toString();
-      ThreadContext.put("traceId", traceId);
-    }
-    LOGGER.info("Preparing message for resource ID={}", resourceId);
-
-    // Build a new message with the traceId header
-    return MessageBuilder
-        .withPayload(resourceId)
-        .setHeader("X-Trace-Id", traceId)
-        .build();
   }
 
   @Retryable(
@@ -348,6 +334,13 @@ public class ResourceService {
         .filter(storageMetadataResponse -> storageMetadataResponse.getStorageType() == storageType)
         .findFirst()
         .orElse(null);
+  }
+
+  private OutboxEvent prepareOutboxEventEntity(Integer resourceId) {
+    OutboxEvent outboxEvent = new OutboxEvent();
+    outboxEvent.setResourceId(resourceId);
+    outboxEvent.setProcessed(false);
+    return outboxEvent;
   }
 }
 
