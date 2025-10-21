@@ -1,22 +1,27 @@
 package com.example.resourceservice.cucumber.steps;
 
-import com.example.resourceservice.controller.ResourceRestController;
-import com.example.resourceservice.entity.ResourceEntity;
-import com.example.resourceservice.repository.ResourceRepository;
-import io.cucumber.java.en.Given;
-import io.cucumber.java.en.Then;
-import io.cucumber.java.en.When;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import java.time.LocalDateTime;
+import java.util.List;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
-import java.time.LocalDateTime;
-import java.util.List;
+import com.example.resourceservice.controller.ResourceRestController;
+import com.example.resourceservice.entity.ResourceEntity;
+import com.example.resourceservice.repository.OutboxEventRepository;
+import com.example.resourceservice.repository.ResourceRepository;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import io.cucumber.java.en.Given;
+import io.cucumber.java.en.Then;
+import io.cucumber.java.en.When;
 
 public class ResourceSteps {
 
@@ -25,6 +30,8 @@ public class ResourceSteps {
 
     @Autowired
     private ResourceRepository resourceRepository;
+    @Autowired
+    private OutboxEventRepository outboxEventRepository;
 
     private MockMvc mockMvc;
 

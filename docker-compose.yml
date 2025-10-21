@@ -282,6 +282,7 @@ services:
       dockerfile: Dockerfile
     ports:
       - "8086:8086"
+      - "5005"
     env_file: .env
     environment:
       EUREKA_SERVER_DEFAULT_ZONE: ${EUREKA_SERVER_DEFAULT}
@@ -298,6 +299,7 @@ services:
       LOG_DIR: ${LOG_DIR}
       LOGSTASH_HOST: ${LOGSTASH_HOST}
       LOGSTASH_PORT: ${LOGSTASH_PORT}
+      JAVA_TOOL_OPTIONS: ${DEBUG_CONFIG}
     restart: always
     volumes:
       - ./config/logging/log4j2.xml:/app/config/log4j2.xml

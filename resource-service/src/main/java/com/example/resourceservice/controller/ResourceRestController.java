@@ -4,6 +4,7 @@ import static com.example.resourceservice.constants.Constants.BAD_REQUEST_RESPON
 
 import com.example.resourceservice.entity.ResourceEntity;
 import com.example.resourceservice.exception.InvalidDataException;
+import com.example.resourceservice.model.requestMetadata.RequestMetadata;
 import com.example.resourceservice.service.ResourceService;
 import com.example.resourceservice.util.DataPreparerService;
 
@@ -28,10 +29,13 @@ public class ResourceRestController {
     private DataPreparerService dataPreparerService;
 
     @PostMapping(consumes = "audio/mpeg")
-    public ResponseEntity<Map<String, Integer>> uploadResource(@RequestBody byte[] audioData) {
+    public ResponseEntity<Map<String, Integer>> uploadResource(@RequestBody byte[] audioData,
+        @RequestHeader(value = "X-Trace-Id", required = false) String traceId) {
         try {
             LOGGER.info("Upload resource request received.");
-            final ResourceEntity resourceEntity = resourceService.uploadResource(audioData);
+            RequestMetadata requestMetadata = new RequestMetadata();
+            requestMetadata.setTraceId(traceId);
+            final ResourceEntity resourceEntity = resourceService.uploadResource(audioData, requestMetadata);
             if (Objects.nonNull(resourceEntity)) {
                 final Map<String, Integer> result = new HashMap<>();
                 result.put("id", resourceEntity.getId());

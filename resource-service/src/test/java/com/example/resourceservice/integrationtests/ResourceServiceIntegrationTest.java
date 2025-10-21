@@ -53,6 +53,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 class ResourceServiceIntegrationTest {
 
+    private static final String STAGING_BUCKET = "staging-resource-files";
+    private static final String S3_KEY = "test-key";
     @Autowired
     private ResourceRestController resourceRestController;
 
@@ -133,7 +135,7 @@ class ResourceServiceIntegrationTest {
     @AfterAll
     void cleanup() {
         try {
-            deleteBucket(s3Client, "test-bucket");
+            deleteBucket(s3Client, STAGING_BUCKET);
         } catch (Exception ignored) {
             // ignore if already deleted
         }
@@ -167,7 +169,7 @@ class ResourceServiceIntegrationTest {
         byte[] audioData = "dummy audio data".getBytes();
 
         // Write file to S3 (LocalStack)
-        storageService.addFileBytesToStorage("test-key", audioData, "test-bucket");
+        storageService.addFileBytesToStorage(S3_KEY, audioData, STAGING_BUCKET);
 
         mockMvc.perform(post("/resources")
                         .content(audioData)
@@ -176,7 +178,7 @@ class ResourceServiceIntegrationTest {
                 .andExpect(jsonPath("$.id").exists());
 
         List<ResourceEntity> resources = resourceRepository.findAll();
-        assertThat(storageService.retrieveFileFromStorage("test-key", "test-bucket").asByteArray()).isEqualTo(audioData);
+        assertThat(storageService.retrieveFileFromStorage(S3_KEY, STAGING_BUCKET).asByteArray()).isEqualTo(audioData);
         assertThat(resources).hasSize(1);
     }
 
@@ -187,8 +189,8 @@ class ResourceServiceIntegrationTest {
     void testGetResource_retrieveSavedResourceFromDBAndFileBytesFromS3() throws Exception {
         // Arrange: create and save a resource entity
         ResourceEntity entity = new ResourceEntity();
-        entity.setFileName("dummy audio");
-        entity.setS3Key("s3Key");
+        entity.setFileName("resources/staging-resource-files");
+        entity.setS3Key(S3_KEY);
         entity.setUploadedAt(LocalDateTime.now());
         resourceRepository.save(entity);
 
@@ -196,7 +198,7 @@ class ResourceServiceIntegrationTest {
         byte[] audioData = "dummy bytes".getBytes(StandardCharsets.UTF_8);
         s3Client.putObject(
                 PutObjectRequest.builder()
-                        .bucket("test-bucket")
+                        .bucket(STAGING_BUCKET)
                         .key(entity.getS3Key())
                         .build(),
                 RequestBody.fromBytes(audioData)
@@ -211,9 +213,9 @@ class ResourceServiceIntegrationTest {
         // Additional verification: entity still exists in repository
         ResourceEntity found = resourceRepository.findById(entity.getId())
                 .orElseThrow(() -> new AssertionError("Resource not found"));
-        assertThat(found.getFileName()).isEqualTo("dummy audio");
-        assertThat(found.getS3Key()).isEqualTo("s3Key");
-        assertThat(storageService.retrieveFileFromStorage("s3Key", "test-bucket").asByteArray()).isEqualTo(audioData);
+        assertThat(found.getFileName()).isEqualTo("resources/staging-resource-files");
+        assertThat(found.getS3Key()).isEqualTo(S3_KEY);
+        assertThat(storageService.retrieveFileFromStorage(S3_KEY, STAGING_BUCKET).asByteArray()).isEqualTo(audioData);
     }
 
     // -----------------------------
@@ -222,15 +224,15 @@ class ResourceServiceIntegrationTest {
     @Test
     void testDeleteResource_deleteSavedResourceFromDBAndFileBytesFromS3() throws Exception {
         ResourceEntity entity = new ResourceEntity();
-        entity.setFileName("audio1");
-        entity.setS3Key("s3Key");
+        entity.setFileName("resources/staging-resource-files");
+        entity.setS3Key(S3_KEY);
         entity.setUploadedAt(LocalDateTime.now());
         resourceRepository.save(entity);
 
         // Upload file to S3
         byte[] audioData = "dummy bytes".getBytes();
         s3Client.putObject(
-                PutObjectRequest.builder().bucket("test-bucket").key("s3Key").build(),
+                PutObjectRequest.builder().bucket(STAGING_BUCKET).key(S3_KEY).build(),
                 RequestBody.fromBytes(audioData)
         );
 
@@ -242,7 +244,7 @@ class ResourceServiceIntegrationTest {
         assertThat(resourceRepository.findById(entity.getId())).isEmpty();
         assertThrows(
                 StorageException.class,
-                () -> storageService.retrieveFileFromStorage("s3Key", "test-bucket")
+                () -> storageService.retrieveFileFromStorage(S3_KEY, STAGING_BUCKET)
         );
     }
 
@@ -264,11 +266,11 @@ class ResourceServiceIntegrationTest {
         String key = "file1.mp3";
 
         s3Client.putObject(
-                b -> b.bucket("test-bucket").key(key),
+                b -> b.bucket(STAGING_BUCKET).key(key),
                 RequestBody.fromBytes(content)
         );
 
-        var result = s3Client.getObjectAsBytes(b -> b.bucket("test-bucket").key(key));
+        var result = s3Client.getObjectAsBytes(b -> b.bucket(STAGING_BUCKET).key(key));
         assertThat(result.asUtf8String()).isEqualTo("hello-test");
     }
 }

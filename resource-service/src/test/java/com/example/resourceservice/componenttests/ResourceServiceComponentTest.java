@@ -141,7 +141,7 @@ class ResourceServiceComponentTest {
 
         byte[] audioData = "dummy bytes".getBytes();
 
-        when(storageService.retrieveFileFromStorage("s3Key","test-bucket"))
+        when(storageService.retrieveFileFromStorage("s3Key","permanent-resource-files"))
                 .thenReturn(ResponseBytes.fromByteArray(getObjectResponse, audioData));
 
         mockMvc.perform(get("/resources/{id}", entity.getId())
@@ -164,7 +164,7 @@ class ResourceServiceComponentTest {
         resourceRepository.save(entity);
         byte[] audioData = "dummy bytes".getBytes();
 
-        when(storageService.retrieveFileFromStorage("s3Key", "test-bucket"))
+        when(storageService.retrieveFileFromStorage("s3Key", "permanent-resource-files"))
                 .thenReturn(ResponseBytes.fromByteArray(getObjectResponse, audioData));
         doNothing().when(songServiceClient).deleteResourceMetadataByResourceId(entity.getId());
 

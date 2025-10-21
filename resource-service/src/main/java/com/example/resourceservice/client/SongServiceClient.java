@@ -4,6 +4,7 @@ import com.example.resourceservice.dto.SongDTO;
 import com.example.resourceservice.exception.SongClientException;
 import com.example.resourceservice.model.ErrorResponse;
 import com.example.resourceservice.model.SongMetadata;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
@@ -21,7 +22,7 @@ public class SongServiceClient {
     private String songServiceUrl;
     private final RestTemplate restTemplate;
 
-    public SongServiceClient(RestTemplate restTemplate) {
+    public SongServiceClient(@Qualifier("restTemplate") RestTemplate restTemplate) {
         this.restTemplate = restTemplate;
     }
 
