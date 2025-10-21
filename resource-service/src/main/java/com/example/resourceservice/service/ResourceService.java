@@ -55,24 +55,20 @@ import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 public class ResourceService {
 
   private static final Logger LOGGER = LogManager.getLogger(ResourceService.class);
-  public static final String CREATE_RESOURCE_METADATA_OUT = "createResourceMetadata-out-0";
   private final ResourceRepository repository;
   private final StorageService storageService;
   private final DataPreparerService dataPreparerService;
   private final SongServiceClient songServiceClient;
   private final StorageMetadataServiceClient storageMetadataServiceClient;
-  private final CreateResourceMetadataPublisher createResourceMetadataPublisher;
   private final String permanentBucketName;
   private final String stagingBucketName;
   private final OutboxEventRepository outboxEventRepository;
 
   public ResourceService(ResourceRepository repository,
-      StreamBridge streamBridge,
       StorageService storageService,
       DataPreparerService dataPreparerService,
       SongServiceClient songServiceClient,
       StorageMetadataServiceClient storageMetadataServiceClient,
-      CreateResourceMetadataPublisher createResourceMetadataPublisher,
       @Value("${s3.permanent-bucket-name}") String permanentBucketName,
       @Value("${s3.staging-bucket-name}") String stagingBucketName,
       OutboxEventRepository outboxEventRepository) {
@@ -81,7 +77,6 @@ public class ResourceService {
     this.dataPreparerService = dataPreparerService;
     this.songServiceClient = songServiceClient;
     this.storageMetadataServiceClient = storageMetadataServiceClient;
-    this.createResourceMetadataPublisher = createResourceMetadataPublisher;
     this.permanentBucketName = permanentBucketName;
     this.stagingBucketName = stagingBucketName;
     this.outboxEventRepository = outboxEventRepository;

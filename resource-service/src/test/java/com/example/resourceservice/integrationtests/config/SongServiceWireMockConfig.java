@@ -30,6 +30,7 @@ public class SongServiceWireMockConfig {
 
     // Expose WireMock URL as Spring property for tests
     public static void configureWireMockProperties(DynamicPropertyRegistry registry) {
+        registry.add("spring.cloud.loadbalancer.enabled", () -> "false");
         registry.add("song.service.url", () ->
                 "http://" + wiremockContainer.getHost() + ":" + wiremockContainer.getMappedPort(8080));
     }

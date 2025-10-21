@@ -19,7 +19,7 @@ public class S3BucketInitializer {
 
     @PostConstruct
     public void initBucket() {
-        String bucketName = "test-bucket";
+        String bucketName = "staging-resource-files";
         if (!bucketExists(bucketName)) {
             s3Client.createBucket(CreateBucketRequest.builder()
                     .bucket(bucketName)
