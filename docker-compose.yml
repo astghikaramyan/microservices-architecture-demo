@@ -398,10 +398,12 @@ services:
       - logger.level=info     # enable DEBUG logs
     ports:
       - "9200:9200"
+    restart: always
     volumes:
       - es-data:/usr/share/elasticsearch/data
     healthcheck:
-      test: [ "CMD-SHELL", "curl -s http://localhost:9200/_cluster/health | grep -q '\"status\":\"green\"'" ]
+      test: [ "CMD", "curl", "-f", "http://localhost:9200/_cluster/health" ]
+#      test: [ "CMD-SHELL", "curl -s http://localhost:9200/_cluster/health | grep -q '\"status\":\"green\"'" ]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -413,6 +415,7 @@ services:
       - ./config/logstash/logstash.conf:/usr/share/logstash/pipeline/logstash.conf
     ports:
       - "5000:5000"
+    restart: always
     environment:
       - LS_JAVA_OPTS=-Xms512m -Xmx512m
       - LOG_LEVEL=info
@@ -433,6 +436,7 @@ services:
       - LOGGING_VERBOSE=true   # enables debug-like output
     ports:
       - "5601:5601"
+    restart: always
     depends_on:
       elasticsearch:
         condition: service_healthy
